@@ -1,10 +1,8 @@
 FROM golang:1.22 AS builder
 
 WORKDIR /app
-COPY go.mod ./
-RUN go mod tidy
-
 COPY . .
+RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=linux go build -o agent cmd/agent/main.go
 
 FROM alpine:latest
