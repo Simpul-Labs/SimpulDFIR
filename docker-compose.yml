@@ -7,10 +7,10 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./backend/simpul_dfir.db:/app/simpul_dfir.db
+      - ./data:/app/data
       - /proc:/host_proc:ro
     environment:
-      - DATABASE_URL=sqlite+aiosqlite:///./simpul_dfir.db
+      - DATABASE_URL=sqlite+aiosqlite:///./data/simpul_dfir.db
     restart: unless-stopped
 
   frontend:
