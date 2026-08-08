@@ -1,5 +1,4 @@
 from pydantic import BaseModel, ConfigDict
-from uuid import UUID
 from datetime import datetime
 from typing import Optional
 
@@ -15,7 +14,7 @@ class AgentUpdate(BaseModel):
     last_seen: Optional[datetime] = None
 
 class AgentResponse(AgentBase):
-    id: UUID
+    id: str
     is_online: bool
     last_seen: datetime
     

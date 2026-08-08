@@ -1,5 +1,4 @@
 from pydantic import BaseModel, ConfigDict
-from uuid import UUID
 from datetime import datetime
 from typing import Optional
 
@@ -9,11 +8,12 @@ class LiveLogBase(BaseModel):
     threat_level: Optional[str] = None
 
 class LiveLogCreate(LiveLogBase):
+    hostname: str
     timestamp: Optional[datetime] = None
 
 class LiveLogResponse(LiveLogBase):
-    id: UUID
-    agent_id: UUID
+    id: str
+    agent_id: str
     timestamp: datetime
     
     model_config = ConfigDict(from_attributes=True)

@@ -74,7 +74,63 @@
         [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="text-slate-300 h-screen overflow-hidden flex selection:bg-cyan-900 selection:text-cyan-100" x-data="{ currentTab: 'fleet' }">
+<body class="text-slate-300 h-screen overflow-hidden flex selection:bg-cyan-900 selection:text-cyan-100" x-data="appData()">
+    
+    <script>
+        function appData() {
+            return {
+                currentTab: 'ops',
+                activeServer: null,
+                agents: [],
+                toasts: [],
+                showToast(message, type = 'info') {
+                    const id = Date.now();
+                    this.toasts.push({ id, message, type });
+                    setTimeout(() => {
+                        this.toasts = this.toasts.filter(t => t.id !== id);
+                    }, 3000);
+                },
+                fetchAgents() {
+                    fetch(`http://${window.location.hostname}:8000/api/v1/agents`)
+                        .then(res => res.json())
+                        .then(data => {
+                            this.agents = data;
+                        })
+                        .catch(err => console.error('Error fetching agents:', err));
+                },
+                init() {
+                    this.fetchAgents();
+                    setInterval(() => this.fetchAgents(), 5000);
+                }
+            }
+        }
+    </script>
+    
+    <!-- Toast Notifications Container -->
+    <div class="fixed bottom-5 right-5 z-50 flex flex-col space-y-3">
+        <template x-for="toast in toasts" :key="toast.id">
+            <div x-show="true" 
+                 x-transition:enter="transition ease-out duration-300" 
+                 x-transition:enter-start="opacity-0 translate-x-10" 
+                 x-transition:enter-end="opacity-100 translate-x-0" 
+                 x-transition:leave="transition ease-in duration-200" 
+                 x-transition:leave-start="opacity-100 translate-x-0" 
+                 x-transition:leave-end="opacity-0 translate-x-10" 
+                 class="px-4 py-3 rounded-lg shadow-2xl flex items-center space-x-3 min-w-[300px] border"
+                 :class="{
+                     'bg-cyan-900/90 border-cyan-500 text-cyan-100': toast.type === 'info',
+                     'bg-emerald-900/90 border-emerald-500 text-emerald-100': toast.type === 'success',
+                     'bg-rose-900/90 border-rose-500 text-rose-100': toast.type === 'error'
+                 }">
+                 <i class="fa-solid" :class="{
+                     'fa-circle-info': toast.type === 'info',
+                     'fa-check-circle': toast.type === 'success',
+                     'fa-triangle-exclamation': toast.type === 'error'
+                 }"></i>
+                 <span class="text-sm font-medium" x-text="toast.message"></span>
+            </div>
+        </template>
+    </div>
 
     <!-- Left Sidebar Navigation -->
     <aside class="w-64 bg-slate-950 border-r border-slate-800 flex flex-col shadow-2xl z-20 shrink-0">
@@ -181,7 +237,7 @@
                         <h2 class="text-2xl font-bold text-white tracking-tight">Fleet Management</h2>
                         <p class="text-slate-400 text-sm mt-1">Monitor and control deployed Simpul agents</p>
                     </div>
-                    <button class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-all shadow-[0_0_15px_rgba(8,145,178,0.2)] hover:shadow-[0_0_20px_rgba(8,145,178,0.4)] flex items-center border border-cyan-400/20 active:scale-95">
+                    <button @click="showToast('Agent deployment initiated (Simulation)', 'success')" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-all shadow-[0_0_15px_rgba(8,145,178,0.2)] hover:shadow-[0_0_20px_rgba(8,145,178,0.4)] flex items-center border border-cyan-400/20 active:scale-95">
                         <i class="fa-solid fa-plus mr-2"></i> Deploy Agent
                     </button>
                 </div>
@@ -218,143 +274,170 @@
                  x-transition:enter-end="opacity-100 translate-y-0"
                  class="max-w-[1600px] mx-auto h-full flex flex-col">
                 
-                <div class="flex items-center justify-between mb-4 shrink-0">
-                    <div>
-                        <h2 class="text-2xl font-bold text-white tracking-tight flex items-center">
-                            Cyber Ops 
-                            <span class="ml-4 px-2.5 py-0.5 rounded text-[10px] uppercase font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center">
-                                <span class="animate-pulse w-1.5 h-1.5 bg-rose-400 rounded-full mr-1.5"></span> Live Mode
-                            </span>
-                        </h2>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-[600px]">
-                    <!-- Terminal -->
-                    <div class="lg:col-span-3 bg-slate-950 rounded-xl border border-slate-800 flex flex-col shadow-2xl relative overflow-hidden group">
-                        
-                        <div class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between z-10">
-                            <div class="flex items-center space-x-2">
-                                <i class="fa-solid fa-terminal text-cyan-500"></i>
-                                <span class="text-xs font-semibold text-slate-300 tracking-widest uppercase">Global Agent Stream</span>
-                            </div>
-                            <div class="flex space-x-2">
-                                <div class="w-3 h-3 rounded-full bg-slate-700 hover:bg-rose-500 transition-colors cursor-pointer"></div>
-                                <div class="w-3 h-3 rounded-full bg-slate-700 hover:bg-yellow-500 transition-colors cursor-pointer"></div>
-                                <div class="w-3 h-3 rounded-full bg-slate-700 hover:bg-emerald-500 transition-colors cursor-pointer"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="p-5 flex-1 overflow-y-auto terminal-text text-[13px] leading-relaxed space-y-1.5 scrollbar-hide bg-[#05080f] relative" 
-                             x-data="{ 
-                                logs: ['Menghubungkan ke Master Node...'],
-                                init() {
-                                    const fetchLogs = async () => {
-                                        try {
-                                            const res = await fetch(`http://${window.location.hostname}:8000/api/v1/logs/recent?limit=50`);
-                                            if (res.ok) {
-                                                const data = await res.json();
-                                                if (data.length > 0) {
-                                                    this.logs = data.map(log => {
-                                                        const date = new Date(log.timestamp);
-                                                        const timeStr = date.toTimeString().split(' ')[0];
-                                                        let prefix = 'INFO';
-                                                        if(log.severity === 'high' || log.severity === 'critical') prefix = 'ALERT';
-                                                        else if(log.severity === 'medium') prefix = 'WARN';
-                                                        return `[${timeStr}] [${log.agent_id}] ${prefix}: ${log.message}`;
-                                                    });
-                                                } else {
-                                                    this.logs = ['[INFO] Master Node siap. Menunggu data log dari agen...'];
-                                                }
-                                                $nextTick(() => { 
-                                                    if($refs.term) $refs.term.scrollTop = $refs.term.scrollHeight; 
-                                                });
-                                            }
-                                        } catch (e) {
-                                            console.error('Failed to fetch logs', e);
-                                        }
-                                    };
-                                    fetchLogs();
-                                    setInterval(fetchLogs, 3000);
-                                }
-                             }" 
-                             x-ref="term">
-                            
-                            <template x-for="log in logs">
-                                <div class="break-all" :class="{
-                                    'text-emerald-400': log.includes('INFO') || log.includes('Accepted'),
-                                    'text-yellow-400': log.includes('WARN'),
-                                    'text-rose-500 font-bold bg-rose-500/10 border-l-2 border-rose-500 pl-2 -ml-2 my-1 py-0.5': log.includes('ALERT'),
-                                    'text-rose-400': log.includes('Failed') && !log.includes('ALERT'),
-                                    'text-slate-400': !log.includes('INFO') && !log.includes('Accepted') && !log.includes('WARN') && !log.includes('Failed') && !log.includes('ALERT')
-                                }" x-text="log"></div>
-                            </template>
-                            
-                            <div class="text-slate-500 flex items-center mt-2">
-                                <span class="mr-2 text-cyan-600 font-bold">root@simpul-master:~#</span>
-                                <span class="w-2 h-[15px] bg-slate-400 animate-pulse"></span>
-                            </div>
+                <!-- SERVER LIST VIEW -->
+                <div x-show="!activeServer" class="flex-1 flex flex-col">
+                    <div class="flex items-center justify-between mb-6 shrink-0">
+                        <div>
+                            <h2 class="text-2xl font-bold text-white tracking-tight flex items-center">
+                                Cyber Ops: Active Fleet
+                            </h2>
+                            <p class="text-slate-400 text-sm mt-1">Select a server to monitor its live forensic stream</p>
                         </div>
                     </div>
                     
-                    <!-- Threats Widget -->
-                    <div class="bg-slate-950 rounded-xl border border-slate-800 flex flex-col shadow-2xl h-full">
-                        <div class="bg-slate-900/50 border-b border-slate-800 px-5 py-4 rounded-t-xl shrink-0">
-                            <h3 class="text-sm font-bold text-rose-400 flex items-center uppercase tracking-wider">
-                                <i class="fa-solid fa-radar mr-2"></i> Active Threats
-                            </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <template x-if="agents.length === 0">
+                            <div class="col-span-full py-12 flex flex-col items-center justify-center text-slate-500 border-2 border-dashed border-slate-800 rounded-xl">
+                                <i class="fa-solid fa-satellite-dish text-4xl mb-4 animate-pulse"></i>
+                                <p>Waiting for agents to connect...</p>
+                            </div>
+                        </template>
+                        <template x-for="agent in agents" :key="agent.id">
+                            <div @click="activeServer = agent" class="bg-slate-900 border border-slate-800 hover:border-cyan-500/50 rounded-xl p-5 cursor-pointer transition-all hover:shadow-[0_0_20px_rgba(34,211,238,0.1)] group relative overflow-hidden">
+                                <div class="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-bl-full -z-10 group-hover:bg-cyan-500/10 transition-colors"></div>
+                                <div class="flex justify-between items-start mb-4">
+                                    <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 group-hover:border-cyan-500/30">
+                                        <i class="fa-solid fa-server text-cyan-500 text-xl"></i>
+                                    </div>
+                                    <span class="flex items-center text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded border border-emerald-400/20">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse mr-1.5"></span> Online
+                                    </span>
+                                </div>
+                                <h3 class="text-white font-bold text-lg mb-1 truncate" x-text="agent.hostname"></h3>
+                                <p class="text-slate-400 text-sm font-mono mb-4" x-text="agent.ip_address"></p>
+                                <div class="text-xs text-slate-500">
+                                    Last seen: <span x-text="new Date(agent.last_seen).toLocaleTimeString()"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- TERMINAL VIEW -->
+                <div x-show="activeServer" class="flex-1 flex flex-col">
+                    <div class="flex items-center justify-between mb-4 shrink-0">
+                        <div class="flex items-center">
+                            <button @click="activeServer = null" class="mr-4 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 p-2.5 rounded-lg border border-slate-800 transition-colors">
+                                <i class="fa-solid fa-arrow-left"></i>
+                            </button>
+                            <div>
+                                <h2 class="text-2xl font-bold text-white tracking-tight flex items-center">
+                                    <span x-text="activeServer?.hostname"></span>
+                                    <span class="ml-4 px-2.5 py-0.5 rounded text-[10px] uppercase font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center">
+                                        <span class="animate-pulse w-1.5 h-1.5 bg-rose-400 rounded-full mr-1.5"></span> Live Stream
+                                    </span>
+                                </h2>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-[600px]">
+                        <!-- Terminal -->
+                        <div class="lg:col-span-3 bg-slate-950 rounded-xl border border-slate-800 flex flex-col shadow-2xl relative overflow-hidden group">
+                            
+                            <div class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between z-10">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fa-solid fa-terminal text-cyan-500"></i>
+                                    <span class="text-xs font-semibold text-slate-300 tracking-widest uppercase" x-text="`STREAM: ${activeServer?.hostname}`"></span>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <div class="w-3 h-3 rounded-full bg-slate-700 hover:bg-rose-500 transition-colors cursor-pointer"></div>
+                                    <div class="w-3 h-3 rounded-full bg-slate-700 hover:bg-yellow-500 transition-colors cursor-pointer"></div>
+                                    <div class="w-3 h-3 rounded-full bg-slate-700 hover:bg-emerald-500 transition-colors cursor-pointer"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="p-5 flex-1 overflow-y-auto terminal-text text-[13px] leading-relaxed space-y-1.5 scrollbar-hide bg-[#05080f] relative" 
+                                 x-data="{ 
+                                    logs: [],
+                                    init() {
+                                        const fetchLogs = async () => {
+                                            if (!this.activeServer) return;
+                                            try {
+                                                const res = await fetch(`http://${window.location.hostname}:8000/api/v1/logs/recent?limit=50&agent_id=${this.activeServer.id}`);
+                                                if (res.ok) {
+                                                    const data = await res.json();
+                                                    if (data.length > 0) {
+                                                        this.logs = data.map(log => {
+                                                            const date = new Date(log.timestamp);
+                                                            const timeStr = date.toTimeString().split(' ')[0];
+                                                            let prefix = 'INFO';
+                                                            if(log.threat_level === 'CRITICAL' || log.log_message.includes('Failed')) prefix = 'ALERT';
+                                                            else if(log.log_message.includes('WARN')) prefix = 'WARN';
+                                                            return `[${timeStr}] ${prefix}: ${log.log_message}`;
+                                                        });
+                                                    } else {
+                                                        this.logs = [`[INFO] Connected to ${this.activeServer.hostname}. Waiting for forensic telemetry...`];
+                                                    }
+                                                    $nextTick(() => { 
+                                                        if($refs.term) $refs.term.scrollTop = $refs.term.scrollHeight; 
+                                                    });
+                                                }
+                                            } catch (e) {
+                                                console.error('Failed to fetch logs', e);
+                                            }
+                                        };
+                                        fetchLogs();
+                                        setInterval(fetchLogs, 2000);
+                                        
+                                        // Watch for server changes to reset logs
+                                        this.$watch('activeServer', () => {
+                                            this.logs = ['Loading stream...'];
+                                            fetchLogs();
+                                        });
+                                    }
+                                 }" 
+                                 x-ref="term">
+                                
+                                <template x-for="log in logs">
+                                    <div class="break-all" :class="{
+                                        'text-emerald-400': log.includes('INFO') || log.includes('Accepted'),
+                                        'text-yellow-400': log.includes('WARN'),
+                                        'text-rose-500 font-bold bg-rose-500/10 border-l-2 border-rose-500 pl-2 -ml-2 my-1 py-0.5': log.includes('ALERT') || log.includes('Failed'),
+                                        'text-slate-400': !log.includes('INFO') && !log.includes('Accepted') && !log.includes('WARN') && !log.includes('Failed') && !log.includes('ALERT')
+                                    }" x-text="log"></div>
+                                </template>
+                                
+                                <div class="text-slate-500 flex items-center mt-2">
+                                    <span class="mr-2 text-cyan-600 font-bold" x-text="`root@${activeServer?.hostname}:~#`"></span>
+                                    <span class="w-2 h-[15px] bg-slate-400 animate-pulse"></span>
+                                </div>
+                            </div>
                         </div>
                         
-                        <div class="p-4 flex-1 overflow-y-auto space-y-4 scrollbar-hide">
+                        <!-- Threats Widget -->
+                        <div class="bg-slate-950 rounded-xl border border-slate-800 flex flex-col shadow-2xl h-full">
+                            <div class="bg-slate-900/50 border-b border-slate-800 px-5 py-4 rounded-t-xl shrink-0">
+                                <h3 class="text-sm font-bold text-rose-400 flex items-center uppercase tracking-wider">
+                                    <i class="fa-solid fa-radar mr-2"></i> Active Threats
+                                </h3>
+                            </div>
                             
-                            <!-- Threat Card 1 -->
-                            <div class="bg-slate-900 border border-rose-500/30 rounded-lg p-4 relative overflow-hidden group hover:border-rose-500 transition-colors">
-                                <div class="absolute top-0 right-0 w-16 h-16 bg-rose-500/10 rounded-bl-full -z-10 group-hover:bg-rose-500/20 transition-colors"></div>
-                                <div class="flex justify-between items-start mb-3">
-                                    <div>
-                                        <div class="text-white font-mono text-sm font-bold flex items-center">
-                                            114.119.160.20
-                                            <i class="fa-solid fa-copy ml-2 text-slate-500 hover:text-slate-300 cursor-pointer text-xs"></i>
+                            <div class="p-4 flex-1 overflow-y-auto space-y-4 scrollbar-hide">
+                                <!-- Simulated Threat specific to server -->
+                                <div class="bg-slate-900 border border-rose-500/30 rounded-lg p-4 relative overflow-hidden group hover:border-rose-500 transition-colors">
+                                    <div class="absolute top-0 right-0 w-16 h-16 bg-rose-500/10 rounded-bl-full -z-10 group-hover:bg-rose-500/20 transition-colors"></div>
+                                    <div class="flex justify-between items-start mb-3">
+                                        <div>
+                                            <div class="text-white font-mono text-sm font-bold flex items-center">
+                                                114.119.160.20
+                                                <i class="fa-solid fa-copy ml-2 text-slate-500 hover:text-slate-300 cursor-pointer text-xs"></i>
+                                            </div>
+                                            <div class="text-[11px] text-slate-400 mt-1 flex items-center">
+                                                <span class="text-slate-300">CN</span> <i class="fa-solid fa-globe mx-1.5 text-slate-600"></i> ASN: 4134
+                                            </div>
                                         </div>
-                                        <div class="text-[11px] text-slate-400 mt-1 flex items-center">
-                                            <span class="text-slate-300">CN</span> <i class="fa-solid fa-globe mx-1.5 text-slate-600"></i> ASN: 4134
-                                        </div>
+                                        <span class="bg-rose-500/20 text-rose-400 text-[9px] uppercase font-bold px-2 py-1 rounded border border-rose-500/30">Brute Force</span>
                                     </div>
-                                    <span class="bg-rose-500/20 text-rose-400 text-[9px] uppercase font-bold px-2 py-1 rounded border border-rose-500/30">Brute Force</span>
-                                </div>
-                                <div class="text-[11px] text-slate-400 mb-4 bg-slate-950 p-2 rounded border border-slate-800">
-                                    Target: <span class="text-slate-200 font-mono">prod-web-01:22</span><br>
-                                    Severity: <span class="text-rose-500 font-bold">CRITICAL (142 att/5m)</span>
-                                </div>
-                                <button class="w-full bg-rose-600/90 hover:bg-rose-500 text-white text-[11px] font-bold py-2.5 rounded transition-all shadow-[0_0_15px_rgba(225,29,72,0.3)] hover:shadow-[0_0_20px_rgba(225,29,72,0.6)] active:scale-95 flex items-center justify-center">
-                                    <i class="fa-solid fa-shield-halved mr-2"></i> BLOCK IP VIA IPTABLES
-                                </button>
-                            </div>
-
-                            <!-- Threat Card 2 -->
-                            <div class="bg-slate-900 border border-yellow-500/30 rounded-lg p-4 relative overflow-hidden group hover:border-yellow-500 transition-colors">
-                                <div class="absolute top-0 right-0 w-16 h-16 bg-yellow-500/10 rounded-bl-full -z-10 group-hover:bg-yellow-500/20 transition-colors"></div>
-                                <div class="flex justify-between items-start mb-3">
-                                    <div>
-                                        <div class="text-white font-mono text-sm font-bold flex items-center">
-                                            185.191.171.1
-                                            <i class="fa-solid fa-copy ml-2 text-slate-500 hover:text-slate-300 cursor-pointer text-xs"></i>
-                                        </div>
-                                        <div class="text-[11px] text-slate-400 mt-1 flex items-center">
-                                            <span class="text-slate-300">RU</span> <i class="fa-solid fa-globe mx-1.5 text-slate-600"></i> ASN: 5122
-                                        </div>
+                                    <div class="text-[11px] text-slate-400 mb-4 bg-slate-950 p-2 rounded border border-slate-800">
+                                        Target: <span class="text-slate-200 font-mono" x-text="`${activeServer?.hostname}:22`"></span><br>
+                                        Severity: <span class="text-rose-500 font-bold">CRITICAL (142 att/5m)</span>
                                     </div>
-                                    <span class="bg-yellow-500/20 text-yellow-400 text-[9px] uppercase font-bold px-2 py-1 rounded border border-yellow-500/30">Path Probing</span>
+                                    <button @click="showToast('IP 114.119.160.20 has been blocked on ' + activeServer.hostname, 'success')" class="w-full bg-rose-600/90 hover:bg-rose-500 text-white text-[11px] font-bold py-2.5 rounded transition-all shadow-[0_0_15px_rgba(225,29,72,0.3)] hover:shadow-[0_0_20px_rgba(225,29,72,0.6)] active:scale-95 flex items-center justify-center">
+                                        <i class="fa-solid fa-shield-halved mr-2"></i> BLOCK IP VIA IPTABLES
+                                    </button>
                                 </div>
-                                <div class="text-[11px] text-slate-400 mb-4 bg-slate-950 p-2 rounded border border-slate-800">
-                                    Target: <span class="text-slate-200 font-mono">prod-web-01:443</span><br>
-                                    Pattern: <span class="text-yellow-500 font-mono">/.env, /wp-login.php</span>
-                                </div>
-                                <button class="w-full bg-rose-600/90 hover:bg-rose-500 text-white text-[11px] font-bold py-2.5 rounded transition-all shadow-[0_0_15px_rgba(225,29,72,0.3)] hover:shadow-[0_0_20px_rgba(225,29,72,0.6)] active:scale-95 flex items-center justify-center">
-                                    <i class="fa-solid fa-shield-halved mr-2"></i> BLOCK IP VIA IPTABLES
-                                </button>
                             </div>
-
                         </div>
                     </div>
                 </div>
@@ -434,7 +517,7 @@
                                 </div>
                             </div>
                             
-                            <button class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3.5 rounded-lg transition-all shadow-[0_0_15px_rgba(8,145,178,0.4)] hover:shadow-[0_0_20px_rgba(8,145,178,0.6)] active:scale-95 flex justify-center items-center text-sm">
+                            <button @click="showToast('Initiating forensic extraction...', 'info')" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3.5 rounded-lg transition-all shadow-[0_0_15px_rgba(8,145,178,0.4)] hover:shadow-[0_0_20px_rgba(8,145,178,0.6)] active:scale-95 flex justify-center items-center text-sm">
                                 <i class="fa-solid fa-file-shield mr-2 text-lg"></i> GENERATE NIST FORENSIC REPORT
                             </button>
                         </div>

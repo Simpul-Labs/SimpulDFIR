@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, logs, commands, forensic, system
+from app.api.v1.endpoints import auth, logs, commands, forensic, system, agents
 
 api_router = APIRouter()
 
@@ -8,3 +8,4 @@ api_router.include_router(logs.router, prefix="/logs", tags=["Logs"])
 api_router.include_router(commands.router, prefix="/commands", tags=["Commands"])
 api_router.include_router(forensic.router, prefix="/forensic", tags=["Forensic"])
 api_router.include_router(system.router, prefix="/system", tags=["System"])
+api_router.include_router(agents.router, prefix="/agents", tags=["Agents"])

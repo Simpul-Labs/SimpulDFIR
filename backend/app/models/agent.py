@@ -1,5 +1,4 @@
 from sqlalchemy import Column, String, Boolean, DateTime
-from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from datetime import datetime, timezone
 from app.core.database import Base
@@ -7,7 +6,7 @@ from app.core.database import Base
 class Agent(Base):
     __tablename__ = "agents"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
     hostname = Column(String, index=True, nullable=False)
     ip_address = Column(String, nullable=False)
     auth_token = Column(String, unique=True, index=True, nullable=False)

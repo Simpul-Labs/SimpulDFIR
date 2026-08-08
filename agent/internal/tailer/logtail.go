@@ -2,6 +2,7 @@ package tailer
 
 import (
 	"log"
+	"os"
 	"strings"
 
 	"github.com/nxadm/tail"
@@ -10,6 +11,7 @@ import (
 // LogEvent represents a structured log entry sent to the API
 type LogEvent struct {
 	Timestamp   string `json:"timestamp"`
+	Hostname    string `json:"hostname"`
 	SourceIP    string `json:"source_ip"`
 	LogMessage  string `json:"log_message"`
 	ThreatLevel string `json:"threat_level"`
@@ -46,8 +48,14 @@ func StartTailer(filePath string, outChan chan<- LogEvent) {
 				}
 			}
 
+			hostname, _ := os.Hostname()
+			if hostname == "" {
+				hostname = "unknown-server"
+			}
+
 			event := LogEvent{
 				Timestamp:   line.Time.UTC().Format("2006-01-02T15:04:05Z"),
+				Hostname:    hostname,
 				SourceIP:    sourceIP,
 				LogMessage:  line.Text,
 				ThreatLevel: "CRITICAL",
