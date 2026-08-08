@@ -82,7 +82,8 @@ EOF
 
 echo "[4/4] Starting and enabling agent service..."
 systemctl daemon-reload
-systemctl enable --now simpul-agent
+systemctl enable simpul-agent
+systemctl restart simpul-agent
 
 echo "========================================="
 echo " Agent successfully installed and running!"
