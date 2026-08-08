@@ -94,3 +94,17 @@ echo " Check status with: systemctl status simpul-agent"
 echo "========================================="
 """
     return PlainTextResponse(script)
+
+@router.delete("/{agent_id}", status_code=204)
+async def delete_agent(agent_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Deletes an agent from the Master Node database.
+    """
+    result = await db.execute(select(Agent).where(Agent.id == agent_id))
+    agent = result.scalars().first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+        
+    await db.delete(agent)
+    await db.commit()
+    return None

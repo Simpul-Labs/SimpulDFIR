@@ -123,6 +123,57 @@
                         })
                         .catch(err => console.error('Error fetching agents:', err));
                 },
+                async deleteAgent(id, hostname) {
+                    if(!confirm(`Are you sure you want to completely remove ${hostname}?`)) return;
+                    
+                    try {
+                        const res = await fetch(`http://${window.location.hostname}:8000/api/v1/agents/${id}`, {
+                            method: 'DELETE'
+                        });
+                        if(res.ok) {
+                            this.showToast(`${hostname} has been removed from the fleet.`, 'success');
+                            this.fetchAgents(); 
+                        } else {
+                            this.showToast('Failed to remove agent', 'error');
+                        }
+                    } catch(err) {
+                        this.showToast('Network error while removing agent', 'error');
+                    }
+                },
+                generateForensicPackage() {
+                    if (!this.forensicTarget) {
+                        this.showToast('Please select a target server first!', 'error');
+                        return;
+                    }
+                    
+                    this.isGenerating = true;
+                    this.generationProgress = 0;
+                    this.showToast('Initiating zero-touch forensic extraction...', 'info');
+                    
+                    const interval = setInterval(() => {
+                        this.generationProgress += Math.floor(Math.random() * 15) + 5;
+                        if (this.generationProgress >= 100) {
+                            this.generationProgress = 100;
+                            clearInterval(interval);
+                            
+                            setTimeout(() => {
+                                this.isGenerating = false;
+                                const targetAgent = this.agents.find(a => a.id === this.forensicTarget);
+                                const newId = 'FR-' + new Date().getFullYear() + '-' + Math.floor(Math.random() * 9000 + 1000);
+                                
+                                this.reports.unshift({
+                                    id: newId,
+                                    server: targetAgent ? targetAgent.hostname : 'Unknown',
+                                    date: new Date().toISOString().split('T')[0],
+                                    size: (Math.random() * 200 + 50).toFixed(1) + ' MB',
+                                    status: 'ready'
+                                });
+                                this.showToast('Forensic package generated successfully!', 'success');
+                                this.forensicTarget = '';
+                            }, 500);
+                        }
+                    }, 800);
+                },
                 init() {
                     this.fetchAgents();
                     setInterval(() => this.fetchAgents(), 5000);
@@ -352,8 +403,8 @@
                                             <button @click="showToast('Initiating deployment for ' + agent.hostname, 'info')" class="text-slate-400 hover:text-cyan-400 transition-colors p-2 hover:bg-slate-800 rounded-lg mr-1" title="Configure">
                                                 <i class="fa-solid fa-gear"></i>
                                             </button>
-                                            <button @click="showToast('Restarting agent on ' + agent.hostname, 'info')" class="text-slate-400 hover:text-emerald-400 transition-colors p-2 hover:bg-slate-800 rounded-lg" title="Restart">
-                                                <i class="fa-solid fa-rotate-right"></i>
+                                            <button @click="deleteAgent(agent.id, agent.hostname)" class="text-slate-400 hover:text-rose-400 transition-colors p-2 hover:bg-rose-500/10 rounded-lg" title="Delete">
+                                                <i class="fa-solid fa-trash-can"></i>
                                             </button>
                                         </td>
                                     </tr>
@@ -569,9 +620,10 @@
                             <div class="mb-6">
                                 <label class="block text-xs font-medium text-slate-400 mb-2">Select Target Server</label>
                                 <div class="relative">
-                                    <select class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 block p-3 appearance-none transition-all outline-none font-medium">
+                                    <select x-model="forensicTarget" :disabled="isGenerating" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 block p-3 appearance-none transition-all outline-none font-medium disabled:opacity-50">
+                                        <option value="" disabled selected>Select an agent...</option>
                                         <template x-if="agents.length === 0">
-                                            <option value="">No agents available</option>
+                                            <option value="" disabled>No agents available</option>
                                         </template>
                                         <template x-for="agent in agents" :key="agent.id">
                                             <option :value="agent.id" x-text="`${agent.hostname} (${agent.ip_address})`"></option>
@@ -617,9 +669,21 @@
                                 </div>
                             </div>
                             
-                            <button @click="showToast('Initiating forensic extraction...', 'info')" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3.5 rounded-lg transition-all shadow-[0_0_15px_rgba(8,145,178,0.4)] hover:shadow-[0_0_20px_rgba(8,145,178,0.6)] active:scale-95 flex justify-center items-center text-sm">
-                                <i class="fa-solid fa-file-shield mr-2 text-lg"></i> GENERATE NIST FORENSIC REPORT
-                            </button>
+                            <div class="mt-8 pt-6 border-t border-slate-800">
+                                <button @click="generateForensicPackage()" x-show="!isGenerating" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-lg transition-all shadow-[0_0_20px_rgba(8,145,178,0.3)] hover:shadow-[0_0_25px_rgba(8,145,178,0.5)] active:scale-[0.98] flex items-center justify-center border border-cyan-400/20">
+                                    <i class="fa-solid fa-microchip mr-2"></i> Generate Forensic Package
+                                </button>
+                                
+                                <div x-show="isGenerating" class="w-full space-y-2">
+                                    <div class="flex justify-between text-xs font-bold text-cyan-400">
+                                        <span>Extracting Artifacts...</span>
+                                        <span x-text="generationProgress + '%'"></span>
+                                    </div>
+                                    <div class="w-full bg-slate-900 rounded-full h-2.5 border border-slate-700 overflow-hidden">
+                                        <div class="bg-gradient-to-r from-cyan-600 to-blue-500 h-2.5 rounded-full transition-all duration-300 ease-out" :style="`width: ${generationProgress}%`"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
