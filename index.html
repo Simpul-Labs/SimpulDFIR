@@ -107,7 +107,7 @@
     </script>
     
     <!-- Toast Notifications Container -->
-    <div class="fixed bottom-5 right-5 z-50 flex flex-col space-y-3">
+    <div class="fixed bottom-5 right-5 z-50 flex flex-col gap-3">
         <template x-for="toast in toasts" :key="toast.id">
             <div x-show="true" 
                  x-transition:enter="transition ease-out duration-300" 
@@ -255,12 +255,41 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-800/50">
-                                <tr>
-                                    <td colspan="5" class="px-6 py-8 text-center text-slate-500">
-                                        <i class="fa-solid fa-server text-4xl mb-3 text-slate-700"></i>
-                                        <p class="text-sm">Tidak ada agen yang terhubung saat ini.</p>
-                                    </td>
-                                </tr>
+                                <template x-if="agents.length === 0">
+                                    <tr>
+                                        <td colspan="5" class="px-6 py-8 text-center text-slate-500">
+                                            <i class="fa-solid fa-server text-4xl mb-3 text-slate-700"></i>
+                                            <p class="text-sm">Tidak ada agen yang terhubung saat ini.</p>
+                                        </td>
+                                    </tr>
+                                </template>
+                                <template x-for="agent in agents" :key="agent.id">
+                                    <tr class="hover:bg-slate-800/50 transition-colors">
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center">
+                                                <i class="fa-solid fa-server text-cyan-500 mr-3"></i>
+                                                <span class="font-medium text-slate-200" x-text="agent.hostname"></span>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="font-mono text-slate-400" x-text="agent.ip_address"></span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span> Active
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-slate-400 text-sm" x-text="new Date(agent.last_seen).toLocaleString()"></td>
+                                        <td class="px-6 py-4 text-right">
+                                            <button @click="showToast('Initiating deployment for ' + agent.hostname, 'info')" class="text-slate-400 hover:text-cyan-400 transition-colors p-2 hover:bg-slate-800 rounded-lg mr-1" title="Configure">
+                                                <i class="fa-solid fa-gear"></i>
+                                            </button>
+                                            <button @click="showToast('Restarting agent on ' + agent.hostname, 'info')" class="text-slate-400 hover:text-emerald-400 transition-colors p-2 hover:bg-slate-800 rounded-lg" title="Restart">
+                                                <i class="fa-solid fa-rotate-right"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
                             </tbody>
                         </table>
                     </div>
@@ -473,9 +502,12 @@
                                 <label class="block text-xs font-medium text-slate-400 mb-2">Select Target Server</label>
                                 <div class="relative">
                                     <select class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 block p-3 appearance-none transition-all outline-none font-medium">
-                                        <option>prod-web-01 (10.0.5.12)</option>
-                                        <option>prod-db-01 (10.0.5.20)</option>
-                                        <option>dev-api-01 (10.0.6.50)</option>
+                                        <template x-if="agents.length === 0">
+                                            <option value="">No agents available</option>
+                                        </template>
+                                        <template x-for="agent in agents" :key="agent.id">
+                                            <option :value="agent.id" x-text="`${agent.hostname} (${agent.ip_address})`"></option>
+                                        </template>
                                     </select>
                                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
                                         <i class="fa-solid fa-chevron-down text-xs"></i>
