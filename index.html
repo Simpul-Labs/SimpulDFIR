@@ -204,13 +204,13 @@
             
             <div class="flex items-center space-x-6">
                 <!-- Active Alerts -->
-                <button class="relative text-slate-400 hover:text-white transition-colors">
+                <button @click="showToast('No new notifications at this time.', 'info')" class="relative text-slate-400 hover:text-white transition-colors cursor-pointer outline-none">
                     <i class="fa-solid fa-bell text-lg"></i>
                     <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-slate-900 animate-pulse"></span>
                 </button>
                 
                 <!-- Admin Profile -->
-                <div class="flex items-center space-x-3 border-l border-slate-800/80 pl-6 cursor-pointer group">
+                <div @click="showToast('Profile settings are currently locked in this demo.', 'error')" class="flex items-center space-x-3 border-l border-slate-800/80 pl-6 cursor-pointer group outline-none">
                     <div class="text-right">
                         <p class="text-slate-200 font-semibold text-sm leading-none group-hover:text-white transition-colors">Admin Root</p>
                         <p class="text-cyan-500/70 text-[10px] mt-1 font-mono uppercase tracking-wider">Superuser</p>
