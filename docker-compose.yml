@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: simpul_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/simpul_dfir.db:/app/simpul_dfir.db
+      - /proc:/host_proc:ro
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./simpul_dfir.db
+    restart: unless-stopped
+
+  frontend:
+    image: nginx:alpine
+    container_name: simpul_frontend
+    ports:
+      - "80:80"
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  agent:
+    build: ./agent
+    container_name: simpul_agent
+    volumes:
+      - /var/log/auth.log:/var/log/auth.log:ro
+    restart: unless-stopped
+    depends_on:
+      - backend
