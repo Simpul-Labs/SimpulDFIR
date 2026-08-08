@@ -11,7 +11,7 @@ import (
 	"github.com/simpul-labs/simpul-dfir-agent/internal/tailer"
 )
 
-const MasterNodeURL = "http://localhost:8000/api/v1/logs/push"
+const MasterNodeURL = "http://192.168.128.111:8000/api/v1/logs/push"
 
 // APIClient handles communication with the Master Node
 type APIClient struct {

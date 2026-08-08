@@ -247,31 +247,35 @@
                         
                         <div class="p-5 flex-1 overflow-y-auto terminal-text text-[13px] leading-relaxed space-y-1.5 scrollbar-hide bg-[#05080f] relative" 
                              x-data="{ 
-                                logs: [],
-                                mockLogs: [
-                                    '[14:41:00] INFO: Agent simpul-core started successfully. Connected to master.',
-                                    '[14:41:05] [prod-web-01] sshd[14213]: Accepted publickey for admin from 10.0.5.5 port 51234 ssh2',
-                                    '[14:42:10] [prod-db-01] WARN: High memory utilization detected (89%) on PID 441 (postgres)',
-                                    '[14:43:11] [prod-web-01] sshd[14502]: Failed password for root from 114.119.160.20 port 38291 ssh2',
-                                    '[14:43:12] [prod-web-01] sshd[14502]: Failed password for root from 114.119.160.20 port 38291 ssh2',
-                                    '[14:43:14] [prod-web-01] sshd[14502]: Failed password for root from 114.119.160.20 port 38291 ssh2',
-                                    '[14:43:15] [prod-web-01] ALERT: Suspicious activity (Rule 42: Brute Force) from 114.119.160.20',
-                                    '[14:44:01] [prod-db-01] CRON[14588]: pam_unix(cron:session): session opened for user root',
-                                    '[14:44:22] [prod-web-01] nginx: GET /wp-login.php HTTP/1.1 404 Not Found - 185.191.171.1',
-                                    '[14:44:23] [prod-web-01] nginx: GET /.env HTTP/1.1 404 Not Found - 185.191.171.1',
-                                    '[14:44:24] [prod-web-01] ALERT: Suspicious web path probing from 185.191.171.1'
-                                ],
-                                index: 0,
+                                logs: ['Menghubungkan ke Master Node (http://192.168.128.111:8000)...'],
                                 init() {
-                                    setInterval(() => {
-                                        if(this.index < this.mockLogs.length) {
-                                            this.logs.push(this.mockLogs[this.index]);
-                                            this.index++;
-                                            $nextTick(() => { 
-                                                if($refs.term) $refs.term.scrollTop = $refs.term.scrollHeight; 
-                                            });
+                                    const fetchLogs = async () => {
+                                        try {
+                                            const res = await fetch('http://192.168.128.111:8000/api/v1/logs/recent?limit=50');
+                                            if (res.ok) {
+                                                const data = await res.json();
+                                                if (data.length > 0) {
+                                                    this.logs = data.map(log => {
+                                                        const date = new Date(log.timestamp);
+                                                        const timeStr = date.toTimeString().split(' ')[0];
+                                                        let prefix = 'INFO';
+                                                        if(log.severity === 'high' || log.severity === 'critical') prefix = 'ALERT';
+                                                        else if(log.severity === 'medium') prefix = 'WARN';
+                                                        return `[${timeStr}] [${log.agent_id}] ${prefix}: ${log.message}`;
+                                                    });
+                                                } else {
+                                                    this.logs = ['[INFO] Master Node siap. Menunggu data log dari agen...'];
+                                                }
+                                                $nextTick(() => { 
+                                                    if($refs.term) $refs.term.scrollTop = $refs.term.scrollHeight; 
+                                                });
+                                            }
+                                        } catch (e) {
+                                            console.error('Failed to fetch logs', e);
                                         }
-                                    }, 1200);
+                                    };
+                                    fetchLogs();
+                                    setInterval(fetchLogs, 3000);
                                 }
                              }" 
                              x-ref="term">
