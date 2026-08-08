@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simpul DFIR - Master Node</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        slate: {
+                            950: '#0a0f18', // extra dark for contrast
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #0f172a; /* slate-900 */
+        }
+        .terminal-text { 
+            font-family: 'JetBrains Mono', monospace; 
+        }
+        /* Custom scrollbar for terminal */
+        .scrollbar-hide::-webkit-scrollbar {
+            width: 6px;
+        }
+        .scrollbar-hide::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .scrollbar-hide::-webkit-scrollbar-thumb {
+            background-color: #334155;
+            border-radius: 20px;
+        }
+        
+        /* Glassmorphism utility */
+        .glass {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        
+        /* Subtle glow utilities */
+        .glow-cyan {
+            box-shadow: 0 0 15px rgba(34, 211, 238, 0.3);
+        }
+        .glow-rose {
+            box-shadow: 0 0 15px rgba(244, 63, 94, 0.3);
+        }
+        
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="text-slate-300 h-screen overflow-hidden flex selection:bg-cyan-900 selection:text-cyan-100" x-data="{ currentTab: 'fleet' }">
+
+    <!-- Left Sidebar Navigation -->
+    <aside class="w-64 bg-slate-950 border-r border-slate-800 flex flex-col shadow-2xl z-20 shrink-0">
+        <!-- Logo/Branding -->
+        <div class="p-6 border-b border-slate-800 relative overflow-hidden">
+            <!-- decorative accent -->
+            <div class="absolute -top-4 -left-4 w-12 h-12 bg-cyan-500 rounded-full blur-2xl opacity-20"></div>
+            
+            <h1 class="text-2xl relative z-10 tracking-tight">
+                <span class="font-bold text-white">Simpul</span><span class="font-light text-cyan-400">DFIR</span>
+            </h1>
+            <p class="text-[10px] text-slate-500 mt-1 tracking-[0.2em] uppercase relative z-10 font-semibold">by Simpul Labs</p>
+        </div>
+        
+        <!-- Nav Links -->
+        <nav class="flex-1 px-3 py-6 space-y-1">
+            <button @click="currentTab = 'fleet'" 
+                :class="currentTab === 'fleet' ? 'bg-slate-800/50 text-cyan-400 border-cyan-400' : 'text-slate-400 hover:bg-slate-800/30 hover:text-slate-200 border-transparent'" 
+                class="w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center group border-l-4">
+                <i class="fa-solid fa-server w-7 text-center group-hover:scale-110 transition-transform"></i> 
+                <span class="font-medium text-sm">Fleet Management</span>
+            </button>
+            
+            <button @click="currentTab = 'ops'" 
+                :class="currentTab === 'ops' ? 'bg-slate-800/50 text-cyan-400 border-cyan-400' : 'text-slate-400 hover:bg-slate-800/30 hover:text-slate-200 border-transparent'" 
+                class="w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center group border-l-4">
+                <i class="fa-solid fa-shield-halved w-7 text-center group-hover:scale-110 transition-transform"></i> 
+                <span class="font-medium text-sm">Cyber Ops</span>
+                <span class="ml-auto flex h-2 w-2 relative" x-show="currentTab !== 'ops'">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                </span>
+            </button>
+            
+            <button @click="currentTab = 'forensics'" 
+                :class="currentTab === 'forensics' ? 'bg-slate-800/50 text-cyan-400 border-cyan-400' : 'text-slate-400 hover:bg-slate-800/30 hover:text-slate-200 border-transparent'" 
+                class="w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center group border-l-4">
+                <i class="fa-solid fa-microscope w-7 text-center group-hover:scale-110 transition-transform"></i> 
+                <span class="font-medium text-sm">Digital Forensics</span>
+            </button>
+        </nav>
+        
+        <!-- System Status Mini-Widget -->
+        <div class="p-4 m-4 rounded-xl bg-slate-900 border border-slate-800">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold text-slate-400">Master Node</span>
+                <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
+            </div>
+            <div class="w-full bg-slate-800 rounded-full h-1.5 mb-1">
+                <div class="bg-cyan-400 h-1.5 rounded-full" style="width: 45%"></div>
+            </div>
+            <div class="text-[10px] text-slate-500 text-right">CPU: 45%</div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col min-w-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-[#0f172a] to-slate-950">
+        
+        <!-- Top Header -->
+        <header class="glass border-b border-slate-800/80 h-16 flex items-center justify-between px-6 z-10 shrink-0">
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2 text-sm bg-slate-950/50 px-3 py-1.5 rounded-md border border-slate-800">
+                    <i class="fa-solid fa-clock text-cyan-500/70"></i>
+                    <span class="font-mono text-slate-300 text-xs" x-data="{ time: '' }" x-init="setInterval(() => { const d = new Date(); time = d.toISOString().replace('T', ' ').substring(0, 19) + ' UTC' }, 1000)" x-text="time"></span>
+                    <div class="h-3 w-px bg-slate-700 mx-2"></div>
+                    <span class="flex items-center text-emerald-400 text-xs font-medium">
+                        <i class="fa-solid fa-check-circle mr-1.5 text-[10px]"></i> NTP Sync
+                    </span>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-6">
+                <!-- Active Alerts -->
+                <button class="relative text-slate-400 hover:text-white transition-colors">
+                    <i class="fa-solid fa-bell text-lg"></i>
+                    <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-slate-900 animate-pulse"></span>
+                </button>
+                
+                <!-- Admin Profile -->
+                <div class="flex items-center space-x-3 border-l border-slate-800/80 pl-6 cursor-pointer group">
+                    <div class="text-right">
+                        <p class="text-slate-200 font-semibold text-sm leading-none group-hover:text-white transition-colors">Admin Root</p>
+                        <p class="text-cyan-500/70 text-[10px] mt-1 font-mono uppercase tracking-wider">Superuser</p>
+                    </div>
+                    <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-800 flex items-center justify-center text-white font-bold text-sm shadow-lg ring-2 ring-slate-800 group-hover:ring-cyan-500/50 transition-all">
+                        <i class="fa-solid fa-user-astronaut"></i>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Dynamic Views -->
+        <main class="flex-1 overflow-x-hidden overflow-y-auto p-6 lg:p-8">
+            
+            <!-- MENU 1: FLEET MANAGEMENT -->
+            <div x-show="currentTab === 'fleet'" x-cloak
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 class="space-y-6 max-w-7xl mx-auto">
+                 
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white tracking-tight">Fleet Management</h2>
+                        <p class="text-slate-400 text-sm mt-1">Monitor and control deployed Simpul agents</p>
+                    </div>
+                    <button class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-all shadow-[0_0_15px_rgba(8,145,178,0.2)] hover:shadow-[0_0_20px_rgba(8,145,178,0.4)] flex items-center border border-cyan-400/20 active:scale-95">
+                        <i class="fa-solid fa-plus mr-2"></i> Deploy Agent
+                    </button>
+                </div>
+
+                <div class="bg-slate-950/80 backdrop-blur-sm rounded-xl border border-slate-800 overflow-hidden shadow-2xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-800/80">
+                                <tr>
+                                    <th class="px-6 py-4 font-semibold tracking-wide">Hostname</th>
+                                    <th class="px-6 py-4 font-semibold tracking-wide">IP Address</th>
+                                    <th class="px-6 py-4 font-semibold tracking-wide">Status</th>
+                                    <th class="px-6 py-4 font-semibold tracking-wide">Last Seen</th>
+                                    <th class="px-6 py-4 font-semibold tracking-wide text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/50">
+                                <tr>
+                                    <td colspan="5" class="px-6 py-8 text-center text-slate-500">
+                                        <i class="fa-solid fa-server text-4xl mb-3 text-slate-700"></i>
+                                        <p class="text-sm">Tidak ada agen yang terhubung saat ini.</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- MENU 2: CYBER OPS -->
+            <div x-show="currentTab === 'ops'" x-cloak
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 class="max-w-[1600px] mx-auto h-full flex flex-col">
+                
+                <div class="flex items-center justify-between mb-4 shrink-0">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white tracking-tight flex items-center">
+                            Cyber Ops 
+                            <span class="ml-4 px-2.5 py-0.5 rounded text-[10px] uppercase font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center">
+                                <span class="animate-pulse w-1.5 h-1.5 bg-rose-400 rounded-full mr-1.5"></span> Live Mode
+                            </span>
+                        </h2>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-[600px]">
+                    <!-- Terminal -->
+                    <div class="lg:col-span-3 bg-slate-950 rounded-xl border border-slate-800 flex flex-col shadow-2xl relative overflow-hidden group">
+                        
+                        <div class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between z-10">
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-solid fa-terminal text-cyan-500"></i>
+                                <span class="text-xs font-semibold text-slate-300 tracking-widest uppercase">Global Agent Stream</span>
+                            </div>
+                            <div class="flex space-x-2">
+                                <div class="w-3 h-3 rounded-full bg-slate-700 hover:bg-rose-500 transition-colors cursor-pointer"></div>
+                                <div class="w-3 h-3 rounded-full bg-slate-700 hover:bg-yellow-500 transition-colors cursor-pointer"></div>
+                                <div class="w-3 h-3 rounded-full bg-slate-700 hover:bg-emerald-500 transition-colors cursor-pointer"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-5 flex-1 overflow-y-auto terminal-text text-[13px] leading-relaxed space-y-1.5 scrollbar-hide bg-[#05080f] relative" 
+                             x-data="{ 
+                                logs: [],
+                                mockLogs: [
+                                    '[14:41:00] INFO: Agent simpul-core started successfully. Connected to master.',
+                                    '[14:41:05] [prod-web-01] sshd[14213]: Accepted publickey for admin from 10.0.5.5 port 51234 ssh2',
+                                    '[14:42:10] [prod-db-01] WARN: High memory utilization detected (89%) on PID 441 (postgres)',
+                                    '[14:43:11] [prod-web-01] sshd[14502]: Failed password for root from 114.119.160.20 port 38291 ssh2',
+                                    '[14:43:12] [prod-web-01] sshd[14502]: Failed password for root from 114.119.160.20 port 38291 ssh2',
+                                    '[14:43:14] [prod-web-01] sshd[14502]: Failed password for root from 114.119.160.20 port 38291 ssh2',
+                                    '[14:43:15] [prod-web-01] ALERT: Suspicious activity (Rule 42: Brute Force) from 114.119.160.20',
+                                    '[14:44:01] [prod-db-01] CRON[14588]: pam_unix(cron:session): session opened for user root',
+                                    '[14:44:22] [prod-web-01] nginx: GET /wp-login.php HTTP/1.1 404 Not Found - 185.191.171.1',
+                                    '[14:44:23] [prod-web-01] nginx: GET /.env HTTP/1.1 404 Not Found - 185.191.171.1',
+                                    '[14:44:24] [prod-web-01] ALERT: Suspicious web path probing from 185.191.171.1'
+                                ],
+                                index: 0,
+                                init() {
+                                    setInterval(() => {
+                                        if(this.index < this.mockLogs.length) {
+                                            this.logs.push(this.mockLogs[this.index]);
+                                            this.index++;
+                                            $nextTick(() => { 
+                                                if($refs.term) $refs.term.scrollTop = $refs.term.scrollHeight; 
+                                            });
+                                        }
+                                    }, 1200);
+                                }
+                             }" 
+                             x-ref="term">
+                            
+                            <template x-for="log in logs">
+                                <div class="break-all" :class="{
+                                    'text-emerald-400': log.includes('INFO') || log.includes('Accepted'),
+                                    'text-yellow-400': log.includes('WARN'),
+                                    'text-rose-500 font-bold bg-rose-500/10 border-l-2 border-rose-500 pl-2 -ml-2 my-1 py-0.5': log.includes('ALERT'),
+                                    'text-rose-400': log.includes('Failed') && !log.includes('ALERT'),
+                                    'text-slate-400': !log.includes('INFO') && !log.includes('Accepted') && !log.includes('WARN') && !log.includes('Failed') && !log.includes('ALERT')
+                                }" x-text="log"></div>
+                            </template>
+                            
+                            <div class="text-slate-500 flex items-center mt-2">
+                                <span class="mr-2 text-cyan-600 font-bold">root@simpul-master:~#</span>
+                                <span class="w-2 h-[15px] bg-slate-400 animate-pulse"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Threats Widget -->
+                    <div class="bg-slate-950 rounded-xl border border-slate-800 flex flex-col shadow-2xl h-full">
+                        <div class="bg-slate-900/50 border-b border-slate-800 px-5 py-4 rounded-t-xl shrink-0">
+                            <h3 class="text-sm font-bold text-rose-400 flex items-center uppercase tracking-wider">
+                                <i class="fa-solid fa-radar mr-2"></i> Active Threats
+                            </h3>
+                        </div>
+                        
+                        <div class="p-4 flex-1 overflow-y-auto space-y-4 scrollbar-hide">
+                            
+                            <!-- Threat Card 1 -->
+                            <div class="bg-slate-900 border border-rose-500/30 rounded-lg p-4 relative overflow-hidden group hover:border-rose-500 transition-colors">
+                                <div class="absolute top-0 right-0 w-16 h-16 bg-rose-500/10 rounded-bl-full -z-10 group-hover:bg-rose-500/20 transition-colors"></div>
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <div class="text-white font-mono text-sm font-bold flex items-center">
+                                            114.119.160.20
+                                            <i class="fa-solid fa-copy ml-2 text-slate-500 hover:text-slate-300 cursor-pointer text-xs"></i>
+                                        </div>
+                                        <div class="text-[11px] text-slate-400 mt-1 flex items-center">
+                                            <span class="text-slate-300">CN</span> <i class="fa-solid fa-globe mx-1.5 text-slate-600"></i> ASN: 4134
+                                        </div>
+                                    </div>
+                                    <span class="bg-rose-500/20 text-rose-400 text-[9px] uppercase font-bold px-2 py-1 rounded border border-rose-500/30">Brute Force</span>
+                                </div>
+                                <div class="text-[11px] text-slate-400 mb-4 bg-slate-950 p-2 rounded border border-slate-800">
+                                    Target: <span class="text-slate-200 font-mono">prod-web-01:22</span><br>
+                                    Severity: <span class="text-rose-500 font-bold">CRITICAL (142 att/5m)</span>
+                                </div>
+                                <button class="w-full bg-rose-600/90 hover:bg-rose-500 text-white text-[11px] font-bold py-2.5 rounded transition-all shadow-[0_0_15px_rgba(225,29,72,0.3)] hover:shadow-[0_0_20px_rgba(225,29,72,0.6)] active:scale-95 flex items-center justify-center">
+                                    <i class="fa-solid fa-shield-halved mr-2"></i> BLOCK IP VIA IPTABLES
+                                </button>
+                            </div>
+
+                            <!-- Threat Card 2 -->
+                            <div class="bg-slate-900 border border-yellow-500/30 rounded-lg p-4 relative overflow-hidden group hover:border-yellow-500 transition-colors">
+                                <div class="absolute top-0 right-0 w-16 h-16 bg-yellow-500/10 rounded-bl-full -z-10 group-hover:bg-yellow-500/20 transition-colors"></div>
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <div class="text-white font-mono text-sm font-bold flex items-center">
+                                            185.191.171.1
+                                            <i class="fa-solid fa-copy ml-2 text-slate-500 hover:text-slate-300 cursor-pointer text-xs"></i>
+                                        </div>
+                                        <div class="text-[11px] text-slate-400 mt-1 flex items-center">
+                                            <span class="text-slate-300">RU</span> <i class="fa-solid fa-globe mx-1.5 text-slate-600"></i> ASN: 5122
+                                        </div>
+                                    </div>
+                                    <span class="bg-yellow-500/20 text-yellow-400 text-[9px] uppercase font-bold px-2 py-1 rounded border border-yellow-500/30">Path Probing</span>
+                                </div>
+                                <div class="text-[11px] text-slate-400 mb-4 bg-slate-950 p-2 rounded border border-slate-800">
+                                    Target: <span class="text-slate-200 font-mono">prod-web-01:443</span><br>
+                                    Pattern: <span class="text-yellow-500 font-mono">/.env, /wp-login.php</span>
+                                </div>
+                                <button class="w-full bg-rose-600/90 hover:bg-rose-500 text-white text-[11px] font-bold py-2.5 rounded transition-all shadow-[0_0_15px_rgba(225,29,72,0.3)] hover:shadow-[0_0_20px_rgba(225,29,72,0.6)] active:scale-95 flex items-center justify-center">
+                                    <i class="fa-solid fa-shield-halved mr-2"></i> BLOCK IP VIA IPTABLES
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- MENU 3: DIGITAL FORENSICS -->
+            <div x-show="currentTab === 'forensics'" x-cloak
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 class="space-y-6 max-w-7xl mx-auto">
+                 
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white tracking-tight">Digital Forensics</h2>
+                        <p class="text-slate-400 text-sm mt-1">Audit, artifact extraction, and compliance reporting</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <div class="lg:col-span-1 space-y-6">
+                        <!-- Extraction Form -->
+                        <div class="bg-slate-950 rounded-xl border border-slate-800 p-6 shadow-xl relative overflow-hidden">
+                            <!-- accent line -->
+                            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-600 to-blue-500"></div>
+                            
+                            <h3 class="text-xs font-bold text-slate-400 mb-5 uppercase tracking-widest flex items-center">
+                                <i class="fa-solid fa-crosshairs mr-2 text-cyan-500"></i> Extraction Target
+                            </h3>
+                            
+                            <div class="mb-6">
+                                <label class="block text-xs font-medium text-slate-400 mb-2">Select Target Server</label>
+                                <div class="relative">
+                                    <select class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 block p-3 appearance-none transition-all outline-none font-medium">
+                                        <option>prod-web-01 (10.0.5.12)</option>
+                                        <option>prod-db-01 (10.0.5.20)</option>
+                                        <option>dev-api-01 (10.0.6.50)</option>
+                                    </select>
+                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                                        <i class="fa-solid fa-chevron-down text-xs"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-8 bg-slate-900 p-4 rounded-lg border border-slate-800">
+                                <label class="block text-xs font-medium text-slate-400 mb-4 uppercase tracking-wider">Artifacts to Collect</label>
+                                <div class="space-y-3">
+                                    <label class="flex items-start space-x-3 cursor-pointer group">
+                                        <input type="checkbox" checked class="w-4 h-4 mt-0.5 bg-slate-950 border-slate-700 rounded text-cyan-500 focus:ring-cyan-500/50 focus:ring-offset-slate-900 form-checkbox transition-colors">
+                                        <div>
+                                            <div class="text-sm text-slate-300 font-mono group-hover:text-white transition-colors">/var/log/auth.log*</div>
+                                            <div class="text-[10px] text-slate-500">Authentication & SSH logs</div>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-start space-x-3 cursor-pointer group">
+                                        <input type="checkbox" checked class="w-4 h-4 mt-0.5 bg-slate-950 border-slate-700 rounded text-cyan-500 focus:ring-cyan-500/50 focus:ring-offset-slate-900 form-checkbox transition-colors">
+                                        <div>
+                                            <div class="text-sm text-slate-300 font-mono group-hover:text-white transition-colors">/var/log/syslog*</div>
+                                            <div class="text-[10px] text-slate-500">System daemon logs</div>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-start space-x-3 cursor-pointer group">
+                                        <input type="checkbox" class="w-4 h-4 mt-0.5 bg-slate-950 border-slate-700 rounded text-cyan-500 focus:ring-cyan-500/50 focus:ring-offset-slate-900 form-checkbox transition-colors">
+                                        <div>
+                                            <div class="text-sm text-slate-300 font-mono group-hover:text-white transition-colors">/var/log/nginx/*</div>
+                                            <div class="text-[10px] text-slate-500">Web server access/error logs</div>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-start space-x-3 cursor-pointer group">
+                                        <input type="checkbox" checked class="w-4 h-4 mt-0.5 bg-slate-950 border-slate-700 rounded text-cyan-500 focus:ring-cyan-500/50 focus:ring-offset-slate-900 form-checkbox transition-colors">
+                                        <div>
+                                            <div class="text-sm text-slate-300 font-mono group-hover:text-white transition-colors">System State Snapshot</div>
+                                            <div class="text-[10px] text-slate-500">netstat, ps aux, lsof, w</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <button class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3.5 rounded-lg transition-all shadow-[0_0_15px_rgba(8,145,178,0.4)] hover:shadow-[0_0_20px_rgba(8,145,178,0.6)] active:scale-95 flex justify-center items-center text-sm">
+                                <i class="fa-solid fa-file-shield mr-2 text-lg"></i> GENERATE NIST FORENSIC REPORT
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="lg:col-span-2">
+                        <!-- Reports Table -->
+                        <div class="bg-slate-950 rounded-xl border border-slate-800 overflow-hidden h-full flex flex-col shadow-xl">
+                            <div class="bg-slate-900/80 border-b border-slate-800 px-6 py-5 shrink-0">
+                                <h3 class="text-sm font-semibold text-white flex items-center tracking-wide">
+                                    <i class="fa-solid fa-folder-open mr-2 text-cyan-500"></i> Recent Forensic Reports
+                                </h3>
+                            </div>
+                            <div class="overflow-x-auto flex-1">
+                                <table class="w-full text-left text-sm whitespace-nowrap">
+                                    <thead class="bg-slate-950 text-slate-400 border-b border-slate-800/80 text-xs uppercase tracking-wider">
+                                        <tr>
+                                            <th class="px-6 py-4 font-semibold">Case ID</th>
+                                            <th class="px-6 py-4 font-semibold">Target Server</th>
+                                            <th class="px-6 py-4 font-semibold">Date Generated</th>
+                                            <th class="px-6 py-4 font-semibold">SHA-256 Hash</th>
+                                            <th class="px-6 py-4 font-semibold text-right">Export</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-800/50">
+                                        <tr class="hover:bg-slate-800/40 transition-colors group">
+                                            <td class="px-6 py-4">
+                                                <span class="font-mono font-medium text-cyan-400 bg-cyan-500/10 px-2 py-1 rounded border border-cyan-500/20">CS-2023-0892</span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-slate-200 font-medium">prod-web-01</div>
+                                            </td>
+                                            <td class="px-6 py-4 text-slate-400 text-xs">
+                                                2026-08-08 14:32:00
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center text-slate-500 font-mono text-[11px] group-hover:text-slate-300 transition-colors">
+                                                    e3b0c44298fc1c149afbf4c8996fb...
+                                                    <i class="fa-solid fa-check-circle text-emerald-500 ml-2" title="Hash Verified"></i>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 text-right">
+                                                <button class="text-slate-500 hover:text-rose-400 transition-colors p-2 hover:bg-slate-800 rounded-lg" title="Download PDF Report">
+                                                    <i class="fa-solid fa-file-pdf text-xl"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr class="hover:bg-slate-800/40 transition-colors group">
+                                            <td class="px-6 py-4">
+                                                <span class="font-mono font-medium text-cyan-400 bg-cyan-500/10 px-2 py-1 rounded border border-cyan-500/20">CS-2023-0891</span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-slate-200 font-medium">dev-api-01</div>
+                                            </td>
+                                            <td class="px-6 py-4 text-slate-400 text-xs">
+                                                2026-08-05 09:15:22
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center text-slate-500 font-mono text-[11px] group-hover:text-slate-300 transition-colors">
+                                                    8d969eef6ecad3c29a3a629280e68...
+                                                    <i class="fa-solid fa-check-circle text-emerald-500 ml-2" title="Hash Verified"></i>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 text-right">
+                                                <button class="text-slate-500 hover:text-rose-400 transition-colors p-2 hover:bg-slate-800 rounded-lg" title="Download PDF Report">
+                                                    <i class="fa-solid fa-file-pdf text-xl"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr class="hover:bg-slate-800/40 transition-colors group">
+                                            <td class="px-6 py-4">
+                                                <span class="font-mono font-medium text-cyan-400 bg-cyan-500/10 px-2 py-1 rounded border border-cyan-500/20">CS-2023-0885</span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-slate-200 font-medium">prod-db-01</div>
+                                            </td>
+                                            <td class="px-6 py-4 text-slate-400 text-xs">
+                                                2026-07-28 22:11:45
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center text-slate-500 font-mono text-[11px] group-hover:text-slate-300 transition-colors">
+                                                    4a7f29b8c3d1e9f5a6b7c8d9e0f1a...
+                                                    <i class="fa-solid fa-check-circle text-emerald-500 ml-2" title="Hash Verified"></i>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 text-right">
+                                                <button class="text-slate-500 hover:text-rose-400 transition-colors p-2 hover:bg-slate-800 rounded-lg" title="Download PDF Report">
+                                                    <i class="fa-solid fa-file-pdf text-xl"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="bg-slate-900 border-t border-slate-800 px-6 py-4 text-xs text-slate-500 flex justify-between items-center shrink-0">
+                                <span>Showing 3 of 124 reports</span>
+                                <div class="flex space-x-2">
+                                    <button class="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 transition-colors">Previous</button>
+                                    <button class="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 transition-colors">Next</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+    </div>
+
+</body>
+</html>
