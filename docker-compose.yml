@@ -9,6 +9,8 @@ services:
     volumes:
       - ./data:/app/data
       - /proc:/host_proc:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     environment:
       - DATABASE_URL=sqlite+aiosqlite:///./data/simpul_dfir.db
     restart: unless-stopped
