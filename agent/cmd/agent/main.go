@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 	
 	"github.com/simpul-labs/simpul-dfir-agent/internal/api"
 	"github.com/simpul-labs/simpul-dfir-agent/internal/tailer"
@@ -39,6 +40,19 @@ func main() {
 	// Start the API client to listen to the channel and send data
 	apiClient := api.NewAPIClient(masterURL, authToken)
 	go apiClient.StartListening(logChan)
+
+	// Send an initial registration heartbeat so the backend knows the agent is online
+	hostname, _ := os.Hostname()
+	if hostname == "" {
+		hostname = "unknown-server"
+	}
+	logChan <- tailer.LogEvent{
+		Timestamp:   time.Now().UTC().Format(time.RFC3339),
+		Hostname:    hostname,
+		SourceIP:    "0.0.0.0",
+		LogMessage:  "Simpul DFIR Agent started successfully",
+		ThreatLevel: "INFO",
+	}
 
 	// Example of using the forensic packer (mock)
 	// result, err := forensic.PrepareArchive("/var/log/auth.log.1")
