@@ -56,8 +56,10 @@ echo " Installing Simpul DFIR Agent"
 echo " Master Node: $MASTER_URL"
 echo "========================================="
 
-echo "[1/4] Downloading agent binary..."
-curl -sSL -o $BIN_PATH $MASTER_URL/api/v1/agents/download
+echo "[1/4] Stopping existing service and downloading agent binary..."
+systemctl stop simpul-agent 2>/dev/null || true
+curl -sSL -o /tmp/simpul-agent $MASTER_URL/api/v1/agents/download
+mv /tmp/simpul-agent $BIN_PATH
 chmod +x $BIN_PATH
 
 echo "[2/4] Generating Auth Token..."
