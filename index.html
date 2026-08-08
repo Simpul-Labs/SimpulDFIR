@@ -84,6 +84,10 @@
                 agents: [],
                 toasts: [],
                 showDeployModal: false,
+                forensicTarget: '',
+                isGenerating: false,
+                generationProgress: 0,
+                reports: [],
                 get installCommand() {
                     return `curl -sSf http://${window.location.hostname}:8000/api/v1/agents/install.sh | bash`;
                 },
