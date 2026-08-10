@@ -10,11 +10,9 @@ services:
       - "8000:8000"
     volumes:
       - ./data:/app/data
-      - /proc:/host_proc:ro
-      - /etc/localtime:/etc/localtime:ro
-      - /etc/timezone:/etc/timezone:ro
     environment:
       - DATABASE_URL=sqlite+aiosqlite:///./data/simpul_dfir.db
+      - TZ=Asia/Jakarta
     restart: unless-stopped
 
   frontend:
