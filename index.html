@@ -14,8 +14,14 @@
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- html2pdf for client-side PDF generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- html2pdf for local client-side PDF generation -->
+    <script>
+        (function() {
+            var s = document.createElement('script');
+            s.src = 'http://' + window.location.hostname + ':8000/static/html2pdf.bundle.min.js';
+            document.head.appendChild(s);
+        })();
+    </script>
     
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -452,39 +458,45 @@
                 },
                 downloadReportAsPDF(report) {
                     var self = this;
-                    self.showToast('Preparing PDF print dialog for ' + report.id + '...', 'info');
+                    self.showToast('Generating PDF for ' + report.id + '...', 'info');
                     
                     try {
                         var fullHtml = self.buildReportHTML(report);
+                        var container = document.createElement('div');
+                        container.style.cssText = 'position:absolute;left:0;top:0;width:800px;background:white;z-index:-9999;opacity:0.01;pointer-events:none;';
+                        container.innerHTML = fullHtml;
+                        document.body.appendChild(container);
                         
-                        // Create a hidden iframe embedded in the current DOM (completely avoids popup blockers & CDN dependencies)
-                        var iframe = document.createElement('iframe');
-                        iframe.style.position = 'fixed';
-                        iframe.style.right = '0';
-                        iframe.style.bottom = '0';
-                        iframe.style.width = '0';
-                        iframe.style.height = '0';
-                        iframe.style.border = '0';
-                        document.body.appendChild(iframe);
-                        
-                        var doc = iframe.contentWindow.document;
-                        doc.open();
-                        doc.write(fullHtml);
-                        doc.close();
-                        
-                        setTimeout(function() {
-                            try {
-                                iframe.contentWindow.focus();
-                                iframe.contentWindow.print();
-                                self.showToast('PDF print dialog opened successfully!', 'success');
-                            } catch(e) {
-                                console.error('iframe print error:', e);
+                        function runPdfSave() {
+                            html2pdf().set({
+                                margin: [10, 10, 10, 10],
+                                filename: report.id + '_Forensic_Report.pdf',
+                                image: { type: 'jpeg', quality: 0.98 },
+                                html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
+                                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                            }).from(container.firstElementChild || container).save().then(function() {
+                                if (container.parentNode) document.body.removeChild(container);
+                                self.showToast('PDF file downloaded successfully!', 'success');
+                            }).catch(function(err) {
+                                console.error('PDF generation error:', err);
+                                if (container.parentNode) document.body.removeChild(container);
                                 self.fallbackDownload(report);
-                            }
+                            });
+                        }
+
+                        if (typeof html2pdf !== 'undefined') {
+                            setTimeout(runPdfSave, 300);
+                        } else {
                             setTimeout(function() {
-                                if (iframe.parentNode) document.body.removeChild(iframe);
-                            }, 2000);
-                        }, 300);
+                                if (typeof html2pdf !== 'undefined') {
+                                    runPdfSave();
+                                } else {
+                                    console.warn('html2pdf library unavailable, downloading HTML file instead');
+                                    if (container.parentNode) document.body.removeChild(container);
+                                    self.fallbackDownload(report);
+                                }
+                            }, 600);
+                        }
                     } catch(err) {
                         console.error('PDF generation error:', err);
                         self.fallbackDownload(report);
