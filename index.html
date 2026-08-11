@@ -136,7 +136,7 @@
                 showDeployModal: false,
                 deployTargetIp: '',
                 generatedInstallCommand: '',
-                reports: [],
+                reports: JSON.parse(localStorage.getItem('dfir_reports') || '[]'),
                 notifications: [],
                 unreadCount: 0,
                 isGenerating: false,
@@ -323,6 +323,7 @@
                                 };
                                 
                                 this.reports.unshift(report);
+                                localStorage.setItem('dfir_reports', JSON.stringify(this.reports));
                                 this.showToast(`Forensic package ${report.id} generated successfully`, 'success');
                                 this.forensicTarget = '';
                             }, 500);
@@ -451,30 +452,54 @@
                         
                         document.body.appendChild(container);
                         
-                        setTimeout(function() {
-                            html2pdf().set({
-                                margin: [8, 8, 8, 8],
-                                filename: report.id + '_Forensic_Report.pdf',
-                                image: { type: 'jpeg', quality: 0.98 },
-                                html2canvas: { scale: 2, useCORS: true, logging: false },
-                                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                            }).from(container.firstChild).save().then(function() {
-                                document.body.removeChild(container);
-                                self.showToast('PDF downloaded successfully!', 'success');
-                            }).catch(function(err) {
-                                console.error('PDF error:', err);
-                                document.body.removeChild(container);
-                                self.showToast('Failed to generate PDF: ' + err.message, 'error');
-                            });
-                        }, 300);
+                        if (typeof html2pdf !== 'undefined') {
+                            setTimeout(function() {
+                                html2pdf().set({
+                                    margin: [8, 8, 8, 8],
+                                    filename: report.id + '_Forensic_Report.pdf',
+                                    image: { type: 'jpeg', quality: 0.98 },
+                                    html2canvas: { scale: 2, useCORS: true, logging: false },
+                                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                                }).from(container.firstChild).save().then(function() {
+                                    document.body.removeChild(container);
+                                    self.showToast('PDF downloaded successfully!', 'success');
+                                }).catch(function(err) {
+                                    console.error('PDF error, falling back to HTML download:', err);
+                                    document.body.removeChild(container);
+                                    self.fallbackDownload(report, container.innerHTML);
+                                });
+                            }, 300);
+                        } else {
+                            // Fallback if CDN is unreachable / offline
+                            console.warn('html2pdf library not loaded (offline?), using direct report download');
+                            document.body.removeChild(container);
+                            self.fallbackDownload(report, container.innerHTML);
+                        }
                     } catch(err) {
                         console.error('PDF generation error:', err);
-                        self.showToast('Error: ' + err.message, 'error');
+                        self.fallbackDownload(report, report.id);
+                    }
+                },
+                fallbackDownload(report, rawHtml) {
+                    try {
+                        const blob = new Blob(['<!DOCTYPE html><html><head><title>' + report.id + '</title></head><body>' + (rawHtml || '') + '</body></html>'], { type: 'text/html' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = report.id + '_Forensic_Report.html';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        this.showToast('Downloaded report as standalone HTML document', 'success');
+                    } catch(e) {
+                        this.showToast('Failed to download report: ' + e.message, 'error');
                     }
                 },
                 deleteReport(reportId) {
                     if (confirm('Are you sure you want to delete this forensic report?')) {
                         this.reports = this.reports.filter(r => r.id !== reportId);
+                        localStorage.setItem('dfir_reports', JSON.stringify(this.reports));
                         this.showToast('Report deleted successfully', 'success');
                     }
                 },
