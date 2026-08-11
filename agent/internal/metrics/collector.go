@@ -80,6 +80,25 @@ func GetRAMUsage() float64 {
 	return ((memTotal - memAvailable) / memTotal) * 100.0
 }
 
+func GetRAMTotalGB() float64 {
+	file, err := os.Open("/proc/meminfo")
+	if err != nil {
+		return 0
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "MemTotal:") {
+			fields := strings.Fields(line)
+			memTotalKb, _ := strconv.ParseFloat(fields[1], 64)
+			return memTotalKb / 1024.0 / 1024.0
+		}
+	}
+	return 0
+}
+
 func GetDiskUsage() float64 {
 	var stat syscall.Statfs_t
 	err := syscall.Statfs("/", &stat)

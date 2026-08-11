@@ -16,11 +16,12 @@ const MasterNodeURL = "http://backend:8000/api/v1/logs/push"
 const MasterMetricsURL = "http://backend:8000/api/v1/agents/%s/metrics"
 
 type MetricsPayload struct {
-	CPU    float64 `json:"cpu"`
-	RAM    float64 `json:"ram"`
-	Disk   float64 `json:"disk"`
-	NetIn  float64 `json:"net_in"`
-	NetOut float64 `json:"net_out"`
+	CPU      float64 `json:"cpu"`
+	RAM      float64 `json:"ram"`
+	RAMTotal float64 `json:"ram_total"`
+	Disk     float64 `json:"disk"`
+	NetIn    float64 `json:"net_in"`
+	NetOut   float64 `json:"net_out"`
 }
 
 

@@ -388,6 +388,7 @@
                                 this.metrics = {
                                     cpu: Number(data.cpu).toFixed(1),
                                     ram: Number(data.ram).toFixed(1),
+                                    ramTotal: data.ram_total ? Number(data.ram_total).toFixed(1) : null,
                                     disk: Number(data.disk).toFixed(1),
                                     netIn: Number(data.net_in).toFixed(2),
                                     netOut: Number(data.net_out).toFixed(2)
@@ -804,7 +805,7 @@
                                     </h3>
                                     <div class="flex items-end space-x-2 mb-2">
                                         <span class="text-3xl font-bold text-white" x-text="metrics.ram + '%'"></span>
-                                        <span class="text-xs text-slate-500 mb-1">/ 32GB</span>
+                                        <span class="text-xs text-slate-500 mb-1" x-text="metrics.ramTotal ? (`/ ${metrics.ramTotal}GB`) : ''"></span>
                                     </div>
                                     <div class="w-full bg-slate-900 rounded-full h-1.5 border border-slate-800 overflow-hidden">
                                         <div class="bg-purple-500 h-1.5 rounded-full transition-all duration-500" :style="`width: ${metrics.ram}%`"></div>
