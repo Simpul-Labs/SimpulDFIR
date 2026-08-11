@@ -330,87 +330,62 @@
                     }, 800);
                 },
                 downloadReportAsPDF(report) {
-                    this.showToast(`Generating PDF for ${report.id}...`, 'info');
+                    const self = this;
+                    self.showToast('Generating PDF for ' + report.id + '...', 'info');
                     
-                    const template = document.createElement('div');
-                    template.innerHTML = `
-                        <div style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; background: white;">
-                            <div style="border-bottom: 3px solid #0891b2; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end;">
-                                <div>
-                                    <h1 style="color: #0f172a; margin: 0; font-size: 26px; font-weight: bold;">Simpul DFIR</h1>
-                                    <p style="color: #64748b; margin: 4px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px;">Digital Forensics & Incident Response</p>
-                                </div>
-                                <div style="text-align: right;">
-                                    <h2 style="color: #0f172a; margin: 0; font-size: 18px;">OFFICIAL REPORT</h2>
-                                    <p style="color: #ef4444; margin: 4px 0 0 0; font-size: 11px; font-weight: bold; letter-spacing: 1px;">TLP: AMBER // CONFIDENTIAL</p>
-                                </div>
-                            </div>
-                            
-                            <h3 style="color: #0f172a; font-size: 14px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; margin-top: 30px;">1. Chain of Custody & Meta-Data</h3>
-                            <table style="width: 100%; margin-bottom: 20px; border-collapse: collapse; font-size: 13px;">
-                                <tr>
-                                    <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; width: 30%; font-weight: 600;">Case Reference:</td>
-                                    <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; color: #0f172a;">${report.id}</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-weight: 600;">Acquisition Target:</td>
-                                    <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; color: #0f172a;">${report.agent} (IPv4: ${report.agent_ip})</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-weight: 600;">Timestamp (UTC):</td>
-                                    <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; color: #0f172a;">${new Date(report.date).toUTCString()}</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-weight: 600;">SHA-256 Integrity Hash:</td>
-                                    <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-family: monospace; font-size: 11px;">${report.hash}</td>
-                                </tr>
-                            </table>
-                            
-                            <h3 style="color: #0f172a; font-size: 14px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; margin-top: 30px;">2. Scope of Acquisition</h3>
-                            <p style="font-size: 13px; line-height: 1.6; color: #334155;">The following digital artifacts were securely extracted from the target system for forensic analysis. All data was captured in a forensically sound manner maintaining original metadata.</p>
-                            <ul style="list-style-type: none; padding: 0; margin-bottom: 30px;">
-                                ${report.logs.map(log => `<li style="padding: 8px 12px; background: #f8fafc; margin-bottom: 6px; border-left: 3px solid #0891b2; font-family: monospace; font-size: 12px;">${log}</li>`).join('')}
-                            </ul>
-                            
-                            <h3 style="color: #0f172a; font-size: 14px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; margin-top: 30px;">3. Automated Triage Summary</h3>
-                            <div style="background: #fff1f2; border: 1px solid #fecaca; border-left: 4px solid #ef4444; padding: 15px; margin-top: 15px;">
-                                <p style="color: #991b1b; font-size: 13px; line-height: 1.6; margin: 0;"><strong>NOTICE:</strong> Initial automated heuristic analysis flagged potential anomalies within the acquired artifacts (${report.logs[0] || 'logs'}). <br><br>It is strongly recommended that a Level 2 SOC Analyst or Digital Forensic Investigator conduct a manual deep-dive review of these files. The original artifacts are preserved in the encrypted vault matching the cryptographic hash documented above.</p>
-                            </div>
-                            
-                            <div style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; color: #94a3b8; font-size: 10px;">
-                                <p style="margin: 0;">Generated automatically by Simpul DFIR Master Node Engine</p>
-                                <p style="margin: 4px 0 0 0;">This document contains sensitive security information. Unauthorized disclosure is strictly prohibited.</p>
-                            </div>
-                        </div>
-                    `;
-                    
-                    const printSection = document.getElementById('print-section') || document.createElement('div');
-                    printSection.id = 'print-section';
-                    printSection.innerHTML = template.innerHTML;
-                    
-                    if (!document.getElementById('print-section')) {
-                        document.body.appendChild(printSection);
+                    try {
+                        const container = document.createElement('div');
+                        container.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;background:white;z-index:-1;';
+                        container.innerHTML = '<div style="padding:40px;font-family:Helvetica,Arial,sans-serif;color:#1e293b;background:white;">'
+                            + '<div style="border-bottom:3px solid #0891b2;padding-bottom:15px;margin-bottom:25px;">'
+                            + '<h1 style="color:#0f172a;margin:0;font-size:26px;font-weight:bold;">Simpul DFIR</h1>'
+                            + '<p style="color:#64748b;margin:4px 0 0 0;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;">Digital Forensics &amp; Incident Response</p>'
+                            + '<div style="text-align:right;margin-top:-40px;"><span style="color:#0f172a;font-size:18px;font-weight:bold;">OFFICIAL REPORT</span><br>'
+                            + '<span style="color:#ef4444;font-size:11px;font-weight:bold;letter-spacing:1px;">TLP: AMBER // CONFIDENTIAL</span></div>'
+                            + '</div>'
+                            + '<h3 style="color:#0f172a;font-size:14px;text-transform:uppercase;border-bottom:1px solid #cbd5e1;padding-bottom:5px;margin-top:30px;">1. Chain of Custody &amp; Meta-Data</h3>'
+                            + '<table style="width:100%;margin-bottom:20px;border-collapse:collapse;font-size:13px;">'
+                            + '<tr><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;width:30%;font-weight:600;">Case Reference:</td><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;">' + report.id + '</td></tr>'
+                            + '<tr><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;font-weight:600;">Acquisition Target:</td><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;">' + report.agent + ' (IPv4: ' + report.agent_ip + ')</td></tr>'
+                            + '<tr><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;font-weight:600;">Timestamp (UTC):</td><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;">' + new Date(report.date).toUTCString() + '</td></tr>'
+                            + '<tr><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;font-weight:600;">SHA-256 Integrity Hash:</td><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;font-family:monospace;font-size:11px;">' + report.hash + '</td></tr>'
+                            + '</table>'
+                            + '<h3 style="color:#0f172a;font-size:14px;text-transform:uppercase;border-bottom:1px solid #cbd5e1;padding-bottom:5px;margin-top:30px;">2. Scope of Acquisition</h3>'
+                            + '<p style="font-size:13px;line-height:1.6;color:#334155;">The following digital artifacts were securely extracted from the target system for forensic analysis.</p>'
+                            + '<ul style="list-style-type:none;padding:0;margin-bottom:30px;">'
+                            + report.logs.map(function(log){ return '<li style="padding:8px 12px;background:#f8fafc;margin-bottom:6px;border-left:3px solid #0891b2;font-family:monospace;font-size:12px;">' + log + '</li>'; }).join('')
+                            + '</ul>'
+                            + '<h3 style="color:#0f172a;font-size:14px;text-transform:uppercase;border-bottom:1px solid #cbd5e1;padding-bottom:5px;margin-top:30px;">3. Automated Triage Summary</h3>'
+                            + '<div style="background:#fff1f2;border:1px solid #fecaca;border-left:4px solid #ef4444;padding:15px;margin-top:15px;">'
+                            + '<p style="color:#991b1b;font-size:13px;line-height:1.6;margin:0;"><strong>NOTICE:</strong> Initial automated heuristic analysis flagged potential anomalies within the acquired artifacts (' + (report.logs[0] || 'logs') + '). It is strongly recommended that a Level 2 SOC Analyst conduct a manual deep-dive review.</p>'
+                            + '</div>'
+                            + '<div style="margin-top:60px;padding-top:20px;border-top:1px solid #e2e8f0;text-align:center;color:#94a3b8;font-size:10px;">'
+                            + '<p style="margin:0;">Generated automatically by Simpul DFIR Master Node Engine</p>'
+                            + '<p style="margin:4px 0 0 0;">This document contains sensitive security information. Unauthorized disclosure is strictly prohibited.</p>'
+                            + '</div></div>';
+                        
+                        document.body.appendChild(container);
+                        
+                        setTimeout(function() {
+                            html2pdf().set({
+                                margin: 10,
+                                filename: report.id + '_Report.pdf',
+                                image: { type: 'jpeg', quality: 0.98 },
+                                html2canvas: { scale: 2, useCORS: true, logging: false },
+                                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                            }).from(container.firstChild).save().then(function() {
+                                document.body.removeChild(container);
+                                self.showToast('PDF downloaded successfully!', 'success');
+                            }).catch(function(err) {
+                                console.error('PDF error:', err);
+                                document.body.removeChild(container);
+                                self.showToast('Failed to generate PDF: ' + err.message, 'error');
+                            });
+                        }, 300);
+                    } catch(err) {
+                        console.error('PDF generation error:', err);
+                        self.showToast('Error: ' + err.message, 'error');
                     }
-                    printSection.style.display = 'block';
-                    
-                    if (!document.getElementById('print-style')) {
-                        const style = document.createElement('style');
-                        style.id = 'print-style';
-                        style.innerHTML = `
-                            @media print { 
-                                body > *:not(#print-section) { display: none !important; } 
-                                #print-section { display: block !important; position: absolute; left: 0; top: 0; width: 100%; background: white; } 
-                                @page { margin: 1cm; } 
-                            }
-                        `;
-                        document.head.appendChild(style);
-                    }
-                    
-                    setTimeout(() => {
-                        window.print();
-                        printSection.style.display = 'none';
-                        this.showToast('PDF print dialog closed', 'success');
-                    }, 500);
                 },
                 deleteReport(reportId) {
                     if (confirm('Are you sure you want to delete this forensic report?')) {
