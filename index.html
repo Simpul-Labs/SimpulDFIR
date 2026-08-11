@@ -278,32 +278,26 @@
                         })
                         .catch(err => console.error('Error fetching agents:', err));
                 },
-                async deleteAgent(id, hostname) {
-                    const targetName = hostname || id || 'agen';
+                async deleteAgent(agent) {
+                    const targetName = agent.hostname || agent.id || agent.ip_address || 'agen';
                     if(!confirm(`Apakah Anda yakin ingin menghapus ${targetName} dari daftar fleet?`)) return;
                     
-                    const deleteKey = id || hostname;
-                    if (!deleteKey) {
-                        this.agents = this.agents.filter(a => a.id !== id && a.hostname !== hostname);
-                        this.showToast(`Agen ${targetName} berhasil dihapus.`, 'success');
-                        return;
-                    }
+                    const deleteKey = agent.id || agent.hostname || agent.ip_address;
+                    if (!deleteKey) return;
                     
                     try {
                         const res = await fetch(`http://${window.location.hostname}:8000/api/v1/agents/${encodeURIComponent(deleteKey)}`, {
                             method: 'DELETE'
                         });
                         if (res.ok || res.status === 204 || res.status === 404) {
-                            this.agents = this.agents.filter(a => a.id !== id && a.hostname !== hostname && a.id !== deleteKey);
+                            this.agents = this.agents.filter(a => a !== agent);
                             this.showToast(`Agen ${targetName} berhasil dihapus dari fleet.`, 'success');
-                            this.fetchAgents(); 
+                            setTimeout(() => this.fetchAgents(), 1000); 
                         } else {
-                            this.agents = this.agents.filter(a => a.id !== id && a.hostname !== hostname && a.id !== deleteKey);
-                            this.showToast(`Agen ${targetName} dihapus.`, 'success');
+                            this.showToast(`Gagal menghapus agen ${targetName}.`, 'error');
                         }
                     } catch(err) {
-                        this.agents = this.agents.filter(a => a.id !== id && a.hostname !== hostname && a.id !== deleteKey);
-                        this.showToast(`Agen ${targetName} dihapus dari tampilan.`, 'info');
+                        this.showToast(`Koneksi terputus saat menghapus agen ${targetName}.`, 'error');
                     }
                 },
                 generateForensicPackage() {
@@ -890,7 +884,7 @@
                                             <button @click="activeServer = agent; currentTab = 'ops'" class="text-slate-400 hover:text-cyan-400 transition-colors p-2 hover:bg-slate-800 rounded-lg mr-1" title="Monitor & Configure Agent">
                                                 <i class="fa-solid fa-sliders"></i>
                                             </button>
-                                            <button @click="deleteAgent(agent.id, agent.hostname)" class="text-slate-400 hover:text-rose-400 transition-colors p-2 hover:bg-rose-500/10 rounded-lg" title="Delete">
+                                            <button @click="deleteAgent(agent)" class="text-slate-400 hover:text-rose-400 transition-colors p-2 hover:bg-rose-500/10 rounded-lg" title="Delete">
                                                 <i class="fa-solid fa-trash-can"></i>
                                             </button>
                                         </td>
