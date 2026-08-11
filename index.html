@@ -97,6 +97,18 @@
                 metrics: { cpu: 0, ram: 0, disk: 0, netIn: 0, netOut: 0 },
                 securityEvents: [],
                 activeConnections: [],
+                get activeThreats() {
+                    const threats = {};
+                    this.securityEvents.filter(e => e.severity === 'high' && e.src && e.src !== '-' && e.src !== '0.0.0.0').forEach(e => {
+                        if (!threats[e.src]) {
+                            threats[e.src] = { ip: e.src, type: e.type, count: 0, target: `${this.activeServer?.hostname || 'System'}:22` };
+                        }
+                        threats[e.src].count++;
+                    });
+                    return Object.values(threats).map(t => ({
+                        ...t, id: t.ip, severityText: `CRITICAL (${t.count} attempts)`
+                    }));
+                },
                 get installCommand() {
                     return `curl -sSf http://${window.location.hostname}:8000/api/v1/agents/install.sh | bash`;
                 },
@@ -792,29 +804,36 @@
                             </div>
                             
                             <div class="p-4 flex-1 overflow-y-auto space-y-4 scrollbar-hide">
-                                <!-- Simulated Threat specific to server -->
-                                <div class="bg-slate-900 border border-rose-500/30 rounded-lg p-4 relative overflow-hidden group hover:border-rose-500 transition-colors">
-                                    <div class="absolute top-0 right-0 w-16 h-16 bg-rose-500/10 rounded-bl-full -z-10 group-hover:bg-rose-500/20 transition-colors"></div>
-                                    <div class="flex justify-between items-start mb-3">
-                                        <div>
-                                            <div class="text-white font-mono text-sm font-bold flex items-center">
-                                                114.119.160.20
-                                                <i class="fa-solid fa-copy ml-2 text-slate-500 hover:text-slate-300 cursor-pointer text-xs"></i>
+                                <template x-if="activeThreats.length === 0">
+                                    <div class="text-center py-10 text-slate-500">
+                                        <i class="fa-solid fa-shield-check text-4xl mb-3 text-emerald-500/30"></i>
+                                        <p class="text-sm">No active threats detected.</p>
+                                    </div>
+                                </template>
+                                <template x-for="threat in activeThreats" :key="threat.id">
+                                    <div class="bg-slate-900 border border-rose-500/30 rounded-lg p-4 relative overflow-hidden group hover:border-rose-500 transition-colors">
+                                        <div class="absolute top-0 right-0 w-16 h-16 bg-rose-500/10 rounded-bl-full -z-10 group-hover:bg-rose-500/20 transition-colors"></div>
+                                        <div class="flex justify-between items-start mb-3">
+                                            <div>
+                                                <div class="text-white font-mono text-sm font-bold flex items-center">
+                                                    <span x-text="threat.ip"></span>
+                                                    <i class="fa-solid fa-copy ml-2 text-slate-500 hover:text-slate-300 cursor-pointer text-xs" @click="navigator.clipboard.writeText(threat.ip); showToast('IP copied to clipboard')"></i>
+                                                </div>
+                                                <div class="text-[11px] text-slate-400 mt-1 flex items-center">
+                                                    <span class="text-slate-300">EXT</span> <i class="fa-solid fa-globe mx-1.5 text-slate-600"></i> Malicious Actor
+                                                </div>
                                             </div>
-                                            <div class="text-[11px] text-slate-400 mt-1 flex items-center">
-                                                <span class="text-slate-300">CN</span> <i class="fa-solid fa-globe mx-1.5 text-slate-600"></i> ASN: 4134
-                                            </div>
+                                            <span class="bg-rose-500/20 text-rose-400 text-[9px] uppercase font-bold px-2 py-1 rounded border border-rose-500/30" x-text="threat.type"></span>
                                         </div>
-                                        <span class="bg-rose-500/20 text-rose-400 text-[9px] uppercase font-bold px-2 py-1 rounded border border-rose-500/30">Brute Force</span>
+                                        <div class="text-[11px] text-slate-400 mb-4 bg-slate-950 p-2 rounded border border-slate-800">
+                                            Target: <span class="text-slate-200 font-mono" x-text="threat.target"></span><br>
+                                            Severity: <span class="text-rose-500 font-bold" x-text="threat.severityText"></span>
+                                        </div>
+                                        <button @click="showToast('IP ' + threat.ip + ' has been blocked on ' + activeServer.hostname, 'success')" class="w-full bg-rose-600/90 hover:bg-rose-500 text-white text-[11px] font-bold py-2.5 rounded transition-all shadow-[0_0_15px_rgba(225,29,72,0.3)] hover:shadow-[0_0_20px_rgba(225,29,72,0.6)] active:scale-95 flex items-center justify-center">
+                                            <i class="fa-solid fa-shield-halved mr-2"></i> BLOCK IP VIA IPTABLES
+                                        </button>
                                     </div>
-                                    <div class="text-[11px] text-slate-400 mb-4 bg-slate-950 p-2 rounded border border-slate-800">
-                                        Target: <span class="text-slate-200 font-mono" x-text="`${activeServer?.hostname}:22`"></span><br>
-                                        Severity: <span class="text-rose-500 font-bold">CRITICAL (142 att/5m)</span>
-                                    </div>
-                                    <button @click="showToast('IP 114.119.160.20 has been blocked on ' + activeServer.hostname, 'success')" class="w-full bg-rose-600/90 hover:bg-rose-500 text-white text-[11px] font-bold py-2.5 rounded transition-all shadow-[0_0_15px_rgba(225,29,72,0.3)] hover:shadow-[0_0_20px_rgba(225,29,72,0.6)] active:scale-95 flex items-center justify-center">
-                                        <i class="fa-solid fa-shield-halved mr-2"></i> BLOCK IP VIA IPTABLES
-                                    </button>
-                                </div>
+                                </template>
                             </div>
                         </div>
                     </div>
