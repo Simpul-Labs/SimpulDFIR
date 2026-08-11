@@ -332,8 +332,12 @@
                 downloadReportAsPDF(report) {
                     this.showToast(`Generating PDF for ${report.id}...`, 'info');
                     
-                    // Create a temporary element for the PDF template
+                    // Create a temporary element for the PDF template and attach it to DOM for html2canvas to render
                     const template = document.createElement('div');
+                    template.style.position = 'absolute';
+                    template.style.left = '-9999px';
+                    template.style.top = '-9999px';
+                    template.style.width = '800px';
                     template.innerHTML = `
                         <div style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; background: white;">
                             <div style="border-bottom: 3px solid #0891b2; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end;">
@@ -393,11 +397,15 @@
                       jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
                     };
                     
+                    document.body.appendChild(template);
+                    
                     html2pdf().set(opt).from(template).save().then(() => {
                         this.showToast('PDF downloaded successfully', 'success');
+                        document.body.removeChild(template);
                     }).catch(err => {
                         this.showToast('Failed to generate PDF', 'error');
                         console.error(err);
+                        document.body.removeChild(template);
                     });
                 },
                 startMetricsSimulation() {
