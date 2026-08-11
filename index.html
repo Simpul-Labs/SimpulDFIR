@@ -77,7 +77,49 @@
         [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="text-slate-300 min-h-screen flex selection:bg-cyan-900 selection:text-cyan-100" x-data="appData()">
+<body class="text-slate-300 min-h-screen flex selection:bg-cyan-900 selection:text-cyan-100 bg-slate-950" x-data="appData()">
+    
+    <!-- LOGIN VIEW (Shown when not logged in) -->
+    <div x-show="!isLoggedIn" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0f172a] to-slate-950 p-4">
+        <div class="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+            <!-- Accent glow -->
+            <div class="absolute -top-12 -left-12 w-32 h-32 bg-cyan-500/20 rounded-full blur-3xl"></div>
+            
+            <div class="text-center mb-8 relative z-10">
+                <div class="w-16 h-16 bg-gradient-to-br from-cyan-600 to-blue-800 rounded-2xl flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4 shadow-lg ring-4 ring-slate-800">
+                    <i class="fa-solid fa-shield-cat"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-white tracking-tight">Simpul DFIR</h1>
+                <p class="text-xs text-slate-400 mt-1 uppercase tracking-widest font-mono">Digital Forensics Engine</p>
+            </div>
+            
+            <form @submit.prevent="login()" class="space-y-5 relative z-10">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Username</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
+                        <input type="text" x-model="loginUsername" placeholder="admin" required class="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/80 focus:ring-1 focus:ring-cyan-500/80 rounded-xl py-3 pl-11 pr-4 text-sm text-white placeholder-slate-600 transition-all outline-none">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Password</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
+                        <input type="password" x-model="loginPassword" placeholder="••••••••" required class="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/80 focus:ring-1 focus:ring-cyan-500/80 rounded-xl py-3 pl-11 pr-4 text-sm text-white placeholder-slate-600 transition-all outline-none">
+                    </div>
+                </div>
+                
+                <button type="submit" class="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-[0_0_20px_rgba(8,145,178,0.3)] hover:shadow-[0_0_25px_rgba(8,145,178,0.5)] active:scale-95 text-sm flex items-center justify-center">
+                    <i class="fa-solid fa-right-to-bracket mr-2"></i> Authenticate System
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center text-[11px] text-slate-500 border-t border-slate-800/80 pt-4">
+                Default Credentials: <code class="text-cyan-400 font-mono">admin</code> / <code class="text-cyan-400 font-mono">admin</code>
+            </div>
+        </div>
+    </div>
     
     <script>
         function appData() {
@@ -85,8 +127,12 @@
                 currentTab: 'forensics',
                 activeServer: null,
                 forensicTarget: '',
-                isGenerating: false,
-                generationProgress: 0,
+                isLoggedIn: !!localStorage.getItem('dfir_token'),
+                loginUsername: '',
+                loginPassword: '',
+                showSettingsModal: false,
+                oldPassword: '',
+                newPassword: '',
                 showDeployModal: false,
                 reports: [],
                 notifications: [],
@@ -97,6 +143,60 @@
                 metrics: { cpu: 0, ram: 0, disk: 0, netIn: 0, netOut: 0 },
                 securityEvents: [],
                 activeConnections: [],
+                async login() {
+                    if (!this.loginUsername || !this.loginPassword) {
+                        this.showToast('Please enter username and password', 'error');
+                        return;
+                    }
+                    try {
+                        const res = await fetch(`http://${window.location.hostname}:8000/api/v1/auth/login`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username: this.loginUsername, password: this.loginPassword })
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            localStorage.setItem('dfir_token', data.access_token);
+                            this.isLoggedIn = true;
+                            this.loginPassword = '';
+                            this.showToast('Login successful', 'success');
+                            this.init();
+                        } else {
+                            this.showToast('Invalid username or password', 'error');
+                        }
+                    } catch (err) {
+                        this.showToast('Login server error', 'error');
+                    }
+                },
+                logout() {
+                    localStorage.removeItem('dfir_token');
+                    this.isLoggedIn = false;
+                    this.showToast('Signed out successfully', 'info');
+                },
+                async changePassword() {
+                    if (!this.oldPassword || !this.newPassword) {
+                        this.showToast('Please fill all password fields', 'error');
+                        return;
+                    }
+                    try {
+                        const res = await fetch(`http://${window.location.hostname}:8000/api/v1/auth/change-password`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ old_password: this.oldPassword, new_password: this.newPassword })
+                        });
+                        if (res.ok) {
+                            this.showToast('Password changed successfully', 'success');
+                            this.showSettingsModal = false;
+                            this.oldPassword = '';
+                            this.newPassword = '';
+                        } else {
+                            const data = await res.json();
+                            this.showToast(data.detail || 'Failed to change password', 'error');
+                        }
+                    } catch (err) {
+                        this.showToast('Error connecting to server', 'error');
+                    }
+                },
                 get activeThreats() {
                     const threats = {};
                     this.securityEvents.filter(e => e.severity === 'high' && e.src && e.src !== '-' && e.src !== '0.0.0.0').forEach(e => {
@@ -524,14 +624,14 @@
                          x-transition:leave-start="opacity-100 translate-y-0"
                          x-transition:leave-end="opacity-0 translate-y-1"
                          class="absolute right-0 mt-3 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50 py-1">
-                        <a href="#" @click.prevent="open = false" class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                        <a href="#" @click.prevent="open = false; showSettingsModal = true" class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
                             <i class="fa-solid fa-user mr-2 text-slate-500"></i> My Profile
                         </a>
-                        <a href="#" @click.prevent="open = false" class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                        <a href="#" @click.prevent="open = false; showSettingsModal = true" class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
                             <i class="fa-solid fa-gear mr-2 text-slate-500"></i> Settings
                         </a>
                         <div class="border-t border-slate-800 my-1"></div>
-                        <a href="#" @click.prevent="open = false" class="block px-4 py-2 text-sm text-rose-400 hover:bg-slate-800 hover:text-rose-300 transition-colors">
+                        <a href="#" @click.prevent="open = false; logout()" class="block px-4 py-2 text-sm text-rose-400 hover:bg-slate-800 hover:text-rose-300 transition-colors">
                             <i class="fa-solid fa-sign-out-alt mr-2 text-rose-500/70"></i> Sign out
                         </a>
                     </div>
@@ -1039,6 +1139,57 @@
                     
                     <div class="px-6 py-4 border-t border-slate-800 bg-slate-950/50 flex justify-end">
                         <button @click="showDeployModal = false" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-medium transition-colors">Close</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Modal -->
+            <div x-show="showSettingsModal" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-0">
+                <div x-show="showSettingsModal" x-transition.opacity class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" @click="showSettingsModal = false"></div>
+                
+                <div x-show="showSettingsModal" 
+                     x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                     x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                     x-transition:leave="transition ease-in duration-200"
+                     x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                     x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                     class="relative bg-slate-900 rounded-xl border border-slate-700 shadow-2xl w-full max-w-lg overflow-hidden">
+                    
+                    <div class="px-6 py-4 border-b border-slate-800 bg-slate-950/50 flex justify-between items-center">
+                        <h3 class="text-lg font-semibold text-white flex items-center">
+                            <i class="fa-solid fa-user-gear text-cyan-500 mr-3"></i> System Settings & Profile
+                        </h3>
+                        <button @click="showSettingsModal = false" class="text-slate-400 hover:text-white transition-colors">
+                            <i class="fa-solid fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="p-6 space-y-6">
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Admin Credentials</h4>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1">Current Password</label>
+                                    <input type="password" x-model="oldPassword" placeholder="••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:border-cyan-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1">New Password</label>
+                                    <input type="password" x-model="newPassword" placeholder="••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:border-cyan-500 outline-none">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="pt-4 border-t border-slate-800">
+                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Security Hardening</h4>
+                            <p class="text-xs text-slate-500 mb-4">Ensure your Master Node API endpoints are protected and accessible only over authorized subnets.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="px-6 py-4 border-t border-slate-800 bg-slate-950/50 flex justify-end space-x-3">
+                        <button @click="showSettingsModal = false" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-medium transition-colors">Cancel</button>
+                        <button @click="changePassword()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium transition-colors">Update Password</button>
                     </div>
                 </div>
             </div>
