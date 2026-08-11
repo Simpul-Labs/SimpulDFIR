@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/simpul-labs/simpul-dfir-agent/internal/tailer"
@@ -91,8 +92,13 @@ func (c *APIClient) PushMetrics(hostname string, metrics MetricsPayload) error {
 		return err
 	}
 
-	url := fmt.Sprintf(MasterMetricsURL, hostname)
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	parsedURL, err := url.Parse(c.MasterURL)
+	if err != nil {
+		return err
+	}
+	
+	metricsURL := fmt.Sprintf("%s://%s/api/v1/agents/%s/metrics", parsedURL.Scheme, parsedURL.Host, hostname)
+	req, err := http.NewRequest("POST", metricsURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return err
 	}
