@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, delete
 from app.core.database import get_db
 from app.models.agent import Agent
+from app.models.live_log import LiveLog
 from app.schemas.agent import AgentResponse
 from app.schemas.metrics import AgentMetrics
 from typing import List, Dict, Optional
@@ -131,18 +132,28 @@ echo "========================================="
 @router.delete("/{agent_id}", status_code=204)
 async def delete_agent(agent_id: str, db: AsyncSession = Depends(get_db)):
     """
-    Deletes an agent from the Master Node database.
+    Deletes an agent and its associated logs from the Master Node database.
     """
-    result = await db.execute(select(Agent).where(Agent.id == agent_id))
-    agent = result.scalars().first()
-    if not agent:
+    # Find agent by ID, hostname, or IP address
+    result = await db.execute(
+        select(Agent).where((Agent.id == agent_id) | (Agent.hostname == agent_id) | (Agent.ip_address == agent_id))
+    )
+    agents = result.scalars().all()
+    
+    if not agents:
         raise HTTPException(status_code=404, detail="Agent not found")
         
-    # Clear from active metrics store
-    ACTIVE_METRICS.pop(agent.hostname, None)
-    ACTIVE_METRICS.pop(agent.id, None)
-    
-    await db.delete(agent)
+    for agent in agents:
+        # Delete associated logs first to avoid foreign key issues
+        await db.execute(delete(LiveLog).where(LiveLog.agent_id == agent.id))
+        
+        # Clear active metrics
+        ACTIVE_METRICS.pop(agent.hostname, None)
+        ACTIVE_METRICS.pop(agent.id, None)
+        
+        # Delete agent record
+        await db.delete(agent)
+        
     await db.commit()
     return None
 
