@@ -142,7 +142,7 @@
                 newPassword: '',
                 showDeployModal: false,
                 deployTargetIp: '',
-                generatedInstallCommand: '',
+                installCommand: '',
                 reports: JSON.parse(localStorage.getItem('dfir_reports') || '[]'),
                 notifications: [],
                 unreadCount: 0,
@@ -220,12 +220,9 @@
                         ...t, id: t.ip, severityText: `CRITICAL (${t.count} attempts)`
                     }));
                 },
-                get installCommand() {
-                    return this.generatedInstallCommand || `curl -sSf http://${window.location.hostname}:8000/api/v1/agents/install.sh | bash`;
-                },
                 async generateDeployToken() {
                     if (!this.deployTargetIp) {
-                        this.showToast('Please enter the target server IP address', 'error');
+                        this.showToast('Masukkan IP address target server', 'error');
                         return;
                     }
                     try {
@@ -236,11 +233,13 @@
                         });
                         if (res.ok) {
                             const data = await res.json();
-                            this.generatedInstallCommand = data.install_command;
-                            this.showToast(`Deployment token bound to IP ${this.deployTargetIp}`, 'success');
+                            this.installCommand = data.install_command;
+                            this.showToast(`Token instalasi berhasil dibuat untuk IP ${this.deployTargetIp}`, 'success');
+                        } else {
+                            this.showToast('Gagal generate token dari server', 'error');
                         }
                     } catch(e) {
-                        this.showToast('Failed to generate deployment token', 'error');
+                        this.showToast('Koneksi terputus saat membuat token', 'error');
                     }
                 },
                 copyInstallCommand() {
@@ -628,9 +627,12 @@
                     ];
                 },
                 init() {
-                    this.fetchAgents();
-                    setInterval(() => this.fetchAgents(), 5000);
-                    this.startMetricsSimulation();
+                    this.installCommand = `curl -sSf http://${window.location.hostname}:8000/api/v1/agents/install.sh | bash`;
+                    if (this.isLoggedIn) {
+                        this.fetchAgents();
+                        setInterval(() => this.fetchAgents(), 5000);
+                        this.startMetricsSimulation();
+                    }
                 }
             }
         }
