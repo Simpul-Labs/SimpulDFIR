@@ -65,18 +65,22 @@ func main() {
 		
 		for {
 			cpu := metrics.GetCPUUsage()
+			cpuCount := metrics.GetCPUCount()
 			ram := metrics.GetRAMUsage()
+			ramUsedGB := metrics.GetRAMUsedGB()
 			ramTotal := metrics.GetRAMTotalGB()
 			disk := metrics.GetDiskUsage()
 			rx, tx := metrics.GetNetworkIO()
 			
 			payload := api.MetricsPayload{
-				CPU:      cpu,
-				RAM:      ram,
-				RAMTotal: ramTotal,
-				Disk:     disk,
-				NetIn:    rx,
-				NetOut:   tx,
+				CPU:       cpu,
+				CPUCount:  cpuCount,
+				RAM:       ram,
+				RAMUsedGB: ramUsedGB,
+				RAMTotal:  ramTotal,
+				Disk:      disk,
+				NetIn:     rx,
+				NetOut:    tx,
 			}
 			
 			err := apiClient.PushMetrics(hostname, payload)

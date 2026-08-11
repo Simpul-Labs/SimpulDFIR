@@ -3,6 +3,7 @@ package metrics
 import (
 	"bufio"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -78,6 +79,32 @@ func GetRAMUsage() float64 {
 	}
 	
 	return ((memTotal - memAvailable) / memTotal) * 100.0
+}
+
+func GetCPUCount() int {
+	return runtime.NumCPU()
+}
+
+func GetRAMUsedGB() float64 {
+	file, err := os.Open("/proc/meminfo")
+	if err != nil {
+		return 0
+	}
+	defer file.Close()
+
+	var memTotal, memAvailable float64
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "MemTotal:") {
+			fields := strings.Fields(line)
+			memTotal, _ = strconv.ParseFloat(fields[1], 64)
+		} else if strings.HasPrefix(line, "MemAvailable:") {
+			fields := strings.Fields(line)
+			memAvailable, _ = strconv.ParseFloat(fields[1], 64)
+		}
+	}
+	return (memTotal - memAvailable) / 1024.0 / 1024.0
 }
 
 func GetRAMTotalGB() float64 {
