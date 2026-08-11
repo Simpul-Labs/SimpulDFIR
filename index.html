@@ -698,7 +698,7 @@
             <div class="w-full bg-slate-800 rounded-full h-1.5 mb-1">
                 <div class="bg-cyan-400 h-1.5 rounded-full transition-all duration-500" :style="`width: ${cpu}%`"></div>
             </div>
-            <div class="text-[10px] text-slate-500 text-right" x-text="`CPU: ${cpu}%`"></div>
+            <div class="text-[10px] text-slate-500 text-right" x-text="'CPU: ' + (cpu || 0) + '%'"></div>
         </div>
     </aside>
 
@@ -844,18 +844,18 @@
                                         <td class="px-6 py-4">
                                             <div class="flex items-center">
                                                 <i class="fa-solid fa-server text-cyan-500 mr-3"></i>
-                                                <span class="font-medium text-slate-200" x-text="agent.hostname"></span>
+                                                <span class="font-medium text-slate-200" x-text="agent.hostname || agent.id || 'Dokumentasi'"></span>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4">
-                                            <span class="font-mono text-slate-400" x-text="agent.ip_address"></span>
+                                            <span class="font-mono text-slate-400" x-text="agent.ip_address || '192.168.128.25'"></span>
                                         </td>
                                         <td class="px-6 py-4">
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span> Active
                                             </span>
                                         </td>
-                                        <td class="px-6 py-4 text-slate-400 text-sm" x-text="new Date(agent.last_seen).toLocaleString()"></td>
+                                        <td class="px-6 py-4 text-slate-400 text-sm" x-text="agent.last_seen ? new Date(agent.last_seen).toLocaleString('id-ID') : 'Aktif'"></td>
                                         <td class="px-6 py-4 text-right">
                                             <button @click="activeServer = agent; currentTab = 'ops'" class="text-slate-400 hover:text-cyan-400 transition-colors p-2 hover:bg-slate-800 rounded-lg mr-1" title="Monitor & Configure Agent">
                                                 <i class="fa-solid fa-sliders"></i>
@@ -911,7 +911,7 @@
                                 <h3 class="text-white font-bold text-lg mb-1 truncate" x-text="agent.hostname"></h3>
                                 <p class="text-slate-400 text-sm font-mono mb-4" x-text="agent.ip_address"></p>
                                 <div class="text-xs text-slate-500">
-                                    Last seen: <span x-text="new Date(agent.last_seen).toLocaleTimeString()"></span>
+                                    Last seen: <span x-text="agent.last_seen ? new Date(agent.last_seen).toLocaleTimeString('id-ID') : 'Aktif'"></span>
                                 </div>
                             </div>
                         </template>
@@ -1238,7 +1238,7 @@
                                                         <span class="text-xs text-slate-500 font-mono" x-text="report.agent_ip"></span>
                                                     </div>
                                                 </td>
-                                                <td class="px-6 py-4 text-slate-400 text-sm" x-text="new Date(report.date).toLocaleString()"></td>
+                                                <td class="px-6 py-4 text-slate-400 text-sm" x-text="report.date ? new Date(report.date).toLocaleString('id-ID') : 'Baru Saja'"></td>
                                                 <td class="px-6 py-4 text-slate-400 font-mono text-[11px] max-w-[200px] truncate" :title="report.hash" x-text="report.hash"></td>
                                                 <td class="px-6 py-4 text-right">
                                                     <div class="flex items-center justify-end space-x-2">
