@@ -89,6 +89,9 @@
                 generationProgress: 0,
                 showDeployModal: false,
                 reports: [],
+                notifications: [],
+                unreadCount: 0,
+                lastLogTime: null,
                 selectedLogs: ['/var/log/auth.log*', '/var/log/syslog*'],
                 // Dashboard Metrics State
                 metrics: { cpu: 0, ram: 0, disk: 0, netIn: 0, netOut: 0 },
@@ -283,12 +286,60 @@
                         }
                     }, 2000);
                     
-                    // Initial mock data
-                    this.securityEvents = [
-                        { time: '10 mins ago', type: 'FAILED_LOGIN', src: '114.119.160.20', user: 'root', severity: 'high' },
-                        { time: '1 hour ago', type: 'PORT_SCAN', src: '45.33.32.156', user: '-', severity: 'medium' },
-                        { time: '2 hours ago', type: 'UFW_BLOCK', src: '103.14.22.9', user: '-', severity: 'low' }
-                    ];
+                    
+                    // Fetch real logs from backend
+                    setInterval(async () => {
+                        try {
+                            const url = this.activeServer 
+                                ? `http://${window.location.hostname}:8000/api/v1/logs/recent?agent_id=${this.activeServer.id}&limit=20`
+                                : `http://${window.location.hostname}:8000/api/v1/logs/recent?limit=20`;
+                                
+                            const res = await fetch(url);
+                            if (res.ok) {
+                                const data = await res.json();
+                                
+                                const newSecEvents = data.map(log => {
+                                    // simple heuristic to parse type
+                                    let type = log.threat_level || 'INFO';
+                                    if(log.log_message.toLowerCase().includes('failed password')) type = 'FAILED_LOGIN';
+                                    if(log.log_message.toLowerCase().includes('brute force')) type = 'BRUTE_FORCE';
+                                    if(log.log_message.toLowerCase().includes('ddos')) type = 'DDOS_DETECTED';
+                                    
+                                    let sev = 'low';
+                                    if (type === 'FAILED_LOGIN' || type === 'BRUTE_FORCE' || type === 'DDOS_DETECTED' || log.threat_level === 'CRITICAL' || log.threat_level === 'HIGH') sev = 'high';
+                                    else if (log.threat_level === 'MEDIUM') sev = 'medium';
+                                    
+                                    return {
+                                        id: log.id,
+                                        time: new Date(log.timestamp).toLocaleTimeString(),
+                                        timestamp: log.timestamp,
+                                        type: type,
+                                        src: log.source_ip || '-',
+                                        user: '-', // Can be parsed with regex later
+                                        severity: sev,
+                                        raw: log.log_message
+                                    };
+                                });
+                                
+                                this.securityEvents = newSecEvents;
+                                
+                                if (this.lastLogTime) {
+                                    const alerts = newSecEvents.filter(e => new Date(e.timestamp) > this.lastLogTime && e.severity === 'high');
+                                    if (alerts.length > 0) {
+                                        this.notifications = [...alerts, ...this.notifications].slice(0, 20);
+                                        this.unreadCount += alerts.length;
+                                    }
+                                }
+                                
+                                if (newSecEvents.length > 0) {
+                                    this.lastLogTime = new Date(newSecEvents[0].timestamp);
+                                }
+                            }
+                        } catch(err) {
+                            console.error('Failed to fetch logs', err);
+                        }
+                    }, 3000);
+                    
                     this.activeConnections = [
                         { proto: 'tcp', local: '0.0.0.0:22', remote: '192.168.1.105:54321', state: 'ESTABLISHED', pid: '1043/sshd' },
                         { proto: 'tcp', local: '127.0.0.1:3306', remote: '127.0.0.1:48200', state: 'ESTABLISHED', pid: '988/mysql' },
@@ -398,12 +449,13 @@
             
             <div class="flex items-center space-x-6">
                 <!-- Active Alerts -->
-                <div x-data="{ open: false }" class="relative">
-                    <button @click="open = !open" @click.outside="open = false" class="relative text-slate-400 hover:text-white transition-colors cursor-pointer outline-none">
+                <div x-data="{ dropdownOpen: false }" class="relative">
+                    <button @click="dropdownOpen = !dropdownOpen; if(dropdownOpen) unreadCount = 0" @click.outside="dropdownOpen = false" class="relative text-slate-400 hover:text-white transition-colors cursor-pointer outline-none">
                         <i class="fa-solid fa-bell text-lg"></i>
+                        <span x-show="unreadCount > 0" x-cloak class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-slate-900 animate-pulse"></span>
                     </button>
                     <!-- Dropdown -->
-                    <div x-show="open" x-cloak
+                    <div x-show="dropdownOpen" x-cloak
                          x-transition:enter="transition ease-out duration-200"
                          x-transition:enter-start="opacity-0 translate-y-1"
                          x-transition:enter-end="opacity-100 translate-y-0"
@@ -411,14 +463,31 @@
                          x-transition:leave-start="opacity-100 translate-y-0"
                          x-transition:leave-end="opacity-0 translate-y-1"
                          class="absolute right-0 mt-3 w-80 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden">
-                        <div class="px-4 py-3 border-b border-slate-800 bg-slate-950/50">
+                        <div class="px-4 py-3 border-b border-slate-800 bg-slate-950/50 flex justify-between items-center">
                             <h3 class="text-sm font-semibold text-white">Notifications</h3>
+                            <button @click="notifications = []; unreadCount = 0" class="text-[10px] text-slate-400 hover:text-cyan-400 transition-colors">Clear All</button>
                         </div>
                         <div class="max-h-64 overflow-y-auto p-2">
-                            <div class="px-3 py-6 text-center text-slate-500 text-sm">
-                                <i class="fa-solid fa-check-circle text-3xl mb-3 text-slate-700"></i>
-                                <p>You're all caught up!</p>
-                            </div>
+                            <template x-if="notifications.length === 0">
+                                <div class="px-3 py-6 text-center text-slate-500 text-sm">
+                                    <i class="fa-solid fa-check-circle text-3xl mb-3 text-slate-700"></i>
+                                    <p>You're all caught up!</p>
+                                </div>
+                            </template>
+                            <template x-for="notif in notifications" :key="notif.id">
+                                <div class="px-3 py-2 mb-1 bg-slate-800/50 hover:bg-slate-800 rounded border border-slate-700/50 transition-colors cursor-pointer">
+                                    <div class="flex items-start">
+                                        <div class="mt-0.5 mr-2">
+                                            <i class="fa-solid fa-triangle-exclamation text-rose-500 text-xs"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs font-bold text-slate-200" x-text="notif.type"></p>
+                                            <p class="text-[10px] text-slate-400 mt-0.5" x-text="`Source: ${notif.src}`"></p>
+                                            <p class="text-[9px] text-slate-500 mt-1" x-text="notif.time"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
                     </div>
                 </div>
