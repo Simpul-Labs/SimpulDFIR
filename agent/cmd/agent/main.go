@@ -31,6 +31,7 @@ func main() {
 
 	logFiles := []string{
 		"/var/log/auth.log",
+		"/var/log/auth.log.1",
 		"/var/log/secure",
 		"/var/log/syslog",
 		"/var/log/messages",
