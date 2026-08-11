@@ -408,6 +408,12 @@
                         document.body.removeChild(template);
                     });
                 },
+                deleteReport(reportId) {
+                    if (confirm('Are you sure you want to delete this forensic report?')) {
+                        this.reports = this.reports.filter(r => r.id !== reportId);
+                        this.showToast('Report deleted successfully', 'success');
+                    }
+                },
                 startMetricsSimulation() {
                     // Start real-time metrics for dashboard
                     setInterval(async () => {
@@ -1092,7 +1098,7 @@
                                             <th class="px-6 py-4 font-semibold">Target Server</th>
                                             <th class="px-6 py-4 font-semibold">Date Generated</th>
                                             <th class="px-6 py-4 font-semibold">SHA-256 Hash</th>
-                                            <th class="px-6 py-4 font-semibold text-right">Export</th>
+                                            <th class="px-6 py-4 font-semibold text-right">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-800/50">
@@ -1114,9 +1120,14 @@
                                                 <td class="px-6 py-4 text-slate-400 text-sm" x-text="new Date(report.date).toLocaleString()"></td>
                                                 <td class="px-6 py-4 text-slate-400 font-mono text-[11px] max-w-[200px] truncate" :title="report.hash" x-text="report.hash"></td>
                                                 <td class="px-6 py-4 text-right">
-                                                    <button @click="downloadReportAsPDF(report)" class="bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 px-3 py-1.5 rounded text-xs font-semibold transition-colors inline-flex items-center">
-                                                        <i class="fa-solid fa-download mr-1.5"></i> PDF
-                                                    </button>
+                                                    <div class="flex items-center justify-end space-x-2">
+                                                        <button @click="downloadReportAsPDF(report)" class="bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 px-3 py-1.5 rounded text-xs font-semibold transition-colors inline-flex items-center" title="Download PDF">
+                                                            <i class="fa-solid fa-download mr-1.5"></i> PDF
+                                                        </button>
+                                                        <button @click="deleteReport(report.id)" class="text-slate-400 hover:text-rose-400 transition-colors p-1.5 hover:bg-rose-500/10 rounded-lg" title="Delete Report">
+                                                            <i class="fa-solid fa-trash-can"></i>
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         </template>
