@@ -701,8 +701,8 @@
                                         </td>
                                         <td class="px-6 py-4 text-slate-400 text-sm" x-text="new Date(agent.last_seen).toLocaleString()"></td>
                                         <td class="px-6 py-4 text-right">
-                                            <button @click="showToast('Initiating deployment for ' + agent.hostname, 'info')" class="text-slate-400 hover:text-cyan-400 transition-colors p-2 hover:bg-slate-800 rounded-lg mr-1" title="Configure">
-                                                <i class="fa-solid fa-gear"></i>
+                                            <button @click="activeServer = agent; currentTab = 'ops'" class="text-slate-400 hover:text-cyan-400 transition-colors p-2 hover:bg-slate-800 rounded-lg mr-1" title="Monitor & Configure Agent">
+                                                <i class="fa-solid fa-sliders"></i>
                                             </button>
                                             <button @click="deleteAgent(agent.id, agent.hostname)" class="text-slate-400 hover:text-rose-400 transition-colors p-2 hover:bg-rose-500/10 rounded-lg" title="Delete">
                                                 <i class="fa-solid fa-trash-can"></i>
