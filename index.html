@@ -203,7 +203,7 @@
                     const threats = {};
                     this.securityEvents.filter(e => e.severity === 'high' && e.src && e.src !== '-' && e.src !== '0.0.0.0').forEach(e => {
                         if (!threats[e.src]) {
-                            threats[e.src] = { ip: e.src, type: e.type, count: 0, target: `${this.activeServer?.hostname || 'System'}:22` };
+                            threats[e.src] = { ip: e.src, type: e.type, count: 0, target: `${e.targetHost}:22` };
                         }
                         threats[e.src].count++;
                     });
@@ -309,7 +309,7 @@
                             setTimeout(() => {
                                 this.isGenerating = false;
                                 
-                                const targetAgent = this.agents.find(a => a.id === parseInt(this.forensicTarget));
+                                const targetAgent = this.agents.find(a => a.id === this.forensicTarget);
                                 
                                 const report = {
                                     id: 'FR-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000),
@@ -446,6 +446,9 @@
                                     if (type === 'FAILED_LOGIN' || type === 'BRUTE_FORCE' || type === 'DDOS_DETECTED' || log.threat_level === 'CRITICAL' || log.threat_level === 'HIGH') sev = 'high';
                                     else if (log.threat_level === 'MEDIUM') sev = 'medium';
                                     
+                                    const sourceAgent = this.agents.find(a => a.id === log.agent_id);
+                                    const agentHostname = sourceAgent ? sourceAgent.hostname : 'System';
+                                    
                                     return {
                                         id: log.id,
                                         time: new Date(log.timestamp).toLocaleTimeString(),
@@ -454,7 +457,8 @@
                                         src: log.source_ip || '-',
                                         user: '-', // Can be parsed with regex later
                                         severity: sev,
-                                        raw: log.log_message
+                                        raw: log.log_message,
+                                        targetHost: agentHostname
                                     };
                                 });
                                 
@@ -619,7 +623,7 @@
                                         </div>
                                         <div>
                                             <p class="text-xs font-bold text-slate-200" x-text="notif.type"></p>
-                                            <p class="text-[10px] text-slate-400 mt-0.5" x-text="`Source: ${notif.src}`"></p>
+                                            <p class="text-[10px] text-slate-400 mt-0.5" x-text="`Source: ${notif.src} \u2192 Target: ${notif.targetHost}`"></p>
                                             <p class="text-[9px] text-slate-500 mt-1" x-text="notif.time"></p>
                                         </div>
                                     </div>
