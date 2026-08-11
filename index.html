@@ -195,43 +195,52 @@
                     // Create a temporary element for the PDF template
                     const template = document.createElement('div');
                     template.innerHTML = `
-                        <div style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b;">
-                            <div style="border-bottom: 2px solid #0891b2; padding-bottom: 20px; margin-bottom: 30px;">
-                                <h1 style="color: #0f172a; margin: 0; font-size: 28px;">Simpul DFIR</h1>
-                                <p style="color: #64748b; margin: 5px 0 0 0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Incident Response Report</p>
+                        <div style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; background: white;">
+                            <div style="border-bottom: 3px solid #0891b2; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end;">
+                                <div>
+                                    <h1 style="color: #0f172a; margin: 0; font-size: 26px; font-weight: bold;">Simpul DFIR</h1>
+                                    <p style="color: #64748b; margin: 4px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px;">Digital Forensics & Incident Response</p>
+                                </div>
+                                <div style="text-align: right;">
+                                    <h2 style="color: #0f172a; margin: 0; font-size: 18px;">OFFICIAL REPORT</h2>
+                                    <p style="color: #ef4444; margin: 4px 0 0 0; font-size: 11px; font-weight: bold; letter-spacing: 1px;">TLP: AMBER // CONFIDENTIAL</p>
+                                </div>
                             </div>
                             
-                            <table style="width: 100%; margin-bottom: 30px; border-collapse: collapse;">
+                            <h3 style="color: #0f172a; font-size: 14px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; margin-top: 30px;">1. Chain of Custody & Meta-Data</h3>
+                            <table style="width: 100%; margin-bottom: 20px; border-collapse: collapse; font-size: 13px;">
                                 <tr>
-                                    <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0; width: 30%;"><strong>Case ID:</strong></td>
-                                    <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0; color: #0f172a;">${report.id}</td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; width: 30%; font-weight: 600;">Case Reference:</td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; color: #0f172a;">${report.id}</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;"><strong>Target Server:</strong></td>
-                                    <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0; color: #0f172a;">${report.agent} (${report.agent_ip})</td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-weight: 600;">Acquisition Target:</td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; color: #0f172a;">${report.agent} (IPv4: ${report.agent_ip})</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;"><strong>Date Generated:</strong></td>
-                                    <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0; color: #0f172a;">${new Date(report.date).toLocaleString()}</td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-weight: 600;">Timestamp (UTC):</td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; color: #0f172a;">${new Date(report.date).toUTCString()}</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;"><strong>Integrity Hash:</strong></td>
-                                    <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0; font-family: monospace; font-size: 11px;">${report.hash}</td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-weight: 600;">SHA-256 Integrity Hash:</td>
+                                    <td style="padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-family: monospace; font-size: 11px;">${report.hash}</td>
                                 </tr>
                             </table>
                             
-                            <h3 style="color: #0f172a; border-left: 4px solid #0891b2; padding-left: 10px; margin-top: 40px;">Extracted Artifacts</h3>
-                            <ul style="list-style-type: none; padding: 0;">
-                                ${report.logs.map(log => `<li style="padding: 10px; background: #f8fafc; margin-bottom: 5px; border-radius: 4px; border: 1px solid #e2e8f0; font-family: monospace;">${log}</li>`).join('')}
+                            <h3 style="color: #0f172a; font-size: 14px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; margin-top: 30px;">2. Scope of Acquisition</h3>
+                            <p style="font-size: 13px; line-height: 1.6; color: #334155;">The following digital artifacts were securely extracted from the target system for forensic analysis. All data was captured in a forensically sound manner maintaining original metadata.</p>
+                            <ul style="list-style-type: none; padding: 0; margin-bottom: 30px;">
+                                ${report.logs.map(log => `<li style="padding: 8px 12px; background: #f8fafc; margin-bottom: 6px; border-left: 3px solid #0891b2; font-family: monospace; font-size: 12px;">${log}</li>`).join('')}
                             </ul>
                             
-                            <div style="margin-top: 50px; background: #fef2f2; border: 1px solid #fecaca; padding: 15px; border-radius: 6px;">
-                                <h4 style="color: #b91c1c; margin-top: 0; display: flex; align-items: center;">Analysis Summary</h4>
-                                <p style="color: #7f1d1d; font-size: 13px; line-height: 1.5; margin-bottom: 0;">Automated analysis detected potential anomalous patterns in ${report.logs[0] || 'the collected logs'}. Manual review of the extracted artifacts by a forensic investigator is highly recommended. The original log files are securely archived with the provided SHA-256 integrity hash.</p>
+                            <h3 style="color: #0f172a; font-size: 14px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; margin-top: 30px;">3. Automated Triage Summary</h3>
+                            <div style="background: #fff1f2; border: 1px solid #fecaca; border-left: 4px solid #ef4444; padding: 15px; margin-top: 15px;">
+                                <p style="color: #991b1b; font-size: 13px; line-height: 1.6; margin: 0;"><strong>NOTICE:</strong> Initial automated heuristic analysis flagged potential anomalies within the acquired artifacts (${report.logs[0] || 'logs'}). <br><br>It is strongly recommended that a Level 2 SOC Analyst or Digital Forensic Investigator conduct a manual deep-dive review of these files. The original artifacts are preserved in the encrypted vault matching the cryptographic hash documented above.</p>
                             </div>
                             
-                            <div style="margin-top: 50px; text-align: center; color: #94a3b8; font-size: 10px;">
-                                Generated by Simpul DFIR Master Node • Confidential
+                            <div style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; color: #94a3b8; font-size: 10px;">
+                                <p style="margin: 0;">Generated automatically by Simpul DFIR Master Node Engine</p>
+                                <p style="margin: 4px 0 0 0;">This document contains sensitive security information. Unauthorized disclosure is strictly prohibited.</p>
                             </div>
                         </div>
                     `;
