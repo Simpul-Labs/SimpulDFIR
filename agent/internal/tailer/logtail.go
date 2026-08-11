@@ -3,6 +3,7 @@ package tailer
 import (
 	"log"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/nxadm/tail"
@@ -17,51 +18,73 @@ type LogEvent struct {
 	ThreatLevel string `json:"threat_level"`
 }
 
+var ipRegex = regexp.MustCompile(`\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b`)
+
 // StartTailer tails a file and sends matching lines to a channel
 func StartTailer(filePath string, outChan chan<- LogEvent) {
+	// Check if file exists before trying to tail
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		log.Printf("Log file does not exist, skipping: %s", filePath)
+		return
+	}
+
 	t, err := tail.TailFile(filePath, tail.Config{
-		Follow: true,
-		ReOpen: true,
+		Follow:    true,
+		ReOpen:    true,
 		MustExist: false,
 	})
 	if err != nil {
-		log.Fatalf("Failed to tail file %s: %v", filePath, err)
+		log.Printf("Failed to tail file %s: %v", filePath, err)
+		return
 	}
 
 	log.Printf("Started tailing: %s", filePath)
 
+	hostname, _ := os.Hostname()
+	if hostname == "" {
+		hostname = "unknown-server"
+	}
+
 	for line := range t.Lines {
 		if line.Err != nil {
-			log.Printf("Error reading line: %v", line.Err)
+			log.Printf("Error reading line in %s: %v", filePath, line.Err)
 			continue
 		}
 
-		// Simple parsing logic looking for "Failed password"
-		if strings.Contains(line.Text, "Failed password") {
-			// Extract IP - basic logic for demonstration
-			parts := strings.Split(line.Text, " ")
-			var sourceIP string
-			for i, part := range parts {
-				if part == "from" && i+1 < len(parts) {
-					sourceIP = parts[i+1]
-					break
-				}
-			}
-
-			hostname, _ := os.Hostname()
-			if hostname == "" {
-				hostname = "unknown-server"
-			}
-
-			event := LogEvent{
-				Timestamp:   line.Time.UTC().Format("2006-01-02T15:04:05Z"),
-				Hostname:    hostname,
-				SourceIP:    sourceIP,
-				LogMessage:  line.Text,
-				ThreatLevel: "CRITICAL",
-			}
-
-			outChan <- event
+		text := line.Text
+		if strings.TrimSpace(text) == "" {
+			continue
 		}
+
+		// Extract IP if present in log message
+		ipMatch := ipRegex.FindString(text)
+		sourceIP := "0.0.0.0"
+		if ipMatch != "" {
+			sourceIP = ipMatch
+		}
+
+		threatLevel := "INFO"
+		lower := strings.ToLower(text)
+
+		// Rule-based classification
+		if strings.Contains(lower, "failed password") || strings.Contains(lower, "authentication failure") || strings.Contains(lower, "invalid user") {
+			threatLevel = "CRITICAL"
+		} else if strings.Contains(lower, "ufw block") || strings.Contains(lower, "iptables") || strings.Contains(lower, "port_scan") {
+			threatLevel = "HIGH"
+		} else if strings.Contains(lower, "error") || strings.Contains(lower, "denied") || strings.Contains(lower, "refused") {
+			threatLevel = "MEDIUM"
+		} else if strings.Contains(lower, "accepted password") || strings.Contains(lower, "session opened") {
+			threatLevel = "LOW"
+		}
+
+		event := LogEvent{
+			Timestamp:   line.Time.UTC().Format("2006-01-02T15:04:05Z"),
+			Hostname:    hostname,
+			SourceIP:    sourceIP,
+			LogMessage:  text,
+			ThreatLevel: threatLevel,
+		}
+
+		outChan <- event
 	}
 }

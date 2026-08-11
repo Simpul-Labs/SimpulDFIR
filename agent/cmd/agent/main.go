@@ -28,15 +28,24 @@ func main() {
 		masterURL = api.MasterNodeURL // Fallback for dev
 	}
 
-	logFilePath := "/var/log/auth.log"
+	logFiles := []string{
+		"/var/log/auth.log",
+		"/var/log/secure",
+		"/var/log/syslog",
+		"/var/log/messages",
+		"/var/log/nginx/access.log",
+		"/var/log/nginx/error.log",
+	}
 	
 	// 2. Initialize Channels
 	// We use a buffered channel to prevent blocking the tailer if API is slow
-	logChan := make(chan tailer.LogEvent, 100)
+	logChan := make(chan tailer.LogEvent, 200)
 
 	// 3. Start Goroutines
-	// Start the tailer in the background
-	go tailer.StartTailer(logFilePath, logChan)
+	// Start tailers for all configured log files in parallel
+	for _, file := range logFiles {
+		go tailer.StartTailer(file, logChan)
+	}
 
 	// Start the API client to listen to the channel and send data
 	apiClient := api.NewAPIClient(masterURL, authToken)
