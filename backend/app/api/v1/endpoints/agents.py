@@ -111,6 +111,10 @@ async def delete_agent(agent_id: str, db: AsyncSession = Depends(get_db)):
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
         
+    # Clear from active metrics store
+    ACTIVE_METRICS.pop(agent.hostname, None)
+    ACTIVE_METRICS.pop(agent.id, None)
+    
     await db.delete(agent)
     await db.commit()
     return None
@@ -132,12 +136,15 @@ async def post_metrics(
     result = await db.execute(select(Agent).where((Agent.hostname == agent_id) | (Agent.id == agent_id)))
     agent = result.scalars().first()
     
-    if agent:
-        agent.last_seen = datetime.now(timezone.utc)
-        agent.is_online = True
-        if client_ip and (agent.ip_address == "0.0.0.0" or not agent.ip_address):
-            agent.ip_address = client_ip
-        await db.commit()
+    if not agent:
+        ACTIVE_METRICS.pop(agent_id, None)
+        raise HTTPException(status_code=404, detail="Agent deleted from master node")
+        
+    agent.last_seen = datetime.now(timezone.utc)
+    agent.is_online = True
+    if client_ip and (agent.ip_address == "0.0.0.0" or not agent.ip_address):
+        agent.ip_address = client_ip
+    await db.commit()
         
     return {"status": "ok"}
 

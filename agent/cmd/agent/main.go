@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 	"time"
@@ -85,6 +86,12 @@ func main() {
 			
 			err := apiClient.PushMetrics(hostname, payload)
 			if err != nil {
+				if err == api.ErrAgentDeleted {
+					log.Println("Agent was deleted from Master Node. Initiating automatic self-uninstall...")
+					// Asynchronously run self-uninstall and exit
+					exec.Command("sh", "-c", "systemctl stop simpul-agent && systemctl disable simpul-agent && rm -f /usr/local/bin/simpul-agent /etc/systemd/system/simpul-agent.service && systemctl daemon-reload").Start()
+					os.Exit(0)
+				}
 				log.Printf("Failed to push metrics: %v", err)
 			}
 			

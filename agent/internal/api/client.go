@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -14,6 +15,8 @@ import (
 
 const MasterNodeURL = "http://backend:8000/api/v1/logs/push"
 const MasterMetricsURL = "http://backend:8000/api/v1/agents/%s/metrics"
+
+var ErrAgentDeleted = errors.New("agent deleted by master node")
 
 type MetricsPayload struct {
 	CPU       float64 `json:"cpu"`
@@ -114,6 +117,10 @@ func (c *APIClient) PushMetrics(hostname string, metrics MetricsPayload) error {
 		return err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return ErrAgentDeleted
+	}
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
