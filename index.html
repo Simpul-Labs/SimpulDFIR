@@ -134,6 +134,8 @@
                 oldPassword: '',
                 newPassword: '',
                 showDeployModal: false,
+                deployTargetIp: '',
+                generatedInstallCommand: '',
                 reports: [],
                 notifications: [],
                 unreadCount: 0,
@@ -210,7 +212,27 @@
                     }));
                 },
                 get installCommand() {
-                    return `curl -sSf http://${window.location.hostname}:8000/api/v1/agents/install.sh | bash`;
+                    return this.generatedInstallCommand || `curl -sSf http://${window.location.hostname}:8000/api/v1/agents/install.sh | bash`;
+                },
+                async generateDeployToken() {
+                    if (!this.deployTargetIp) {
+                        this.showToast('Please enter the target server IP address', 'error');
+                        return;
+                    }
+                    try {
+                        const res = await fetch(`http://${window.location.hostname}:8000/api/v1/agents/token`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ target_ip: this.deployTargetIp })
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.generatedInstallCommand = data.install_command;
+                            this.showToast(`Deployment token bound to IP ${this.deployTargetIp}`, 'success');
+                        }
+                    } catch(e) {
+                        this.showToast('Failed to generate deployment token', 'error');
+                    }
                 },
                 copyInstallCommand() {
                     if (navigator.clipboard && window.isSecureContext) {
@@ -1123,20 +1145,27 @@
                     </div>
                     
                     <div class="p-6">
-                        <p class="text-slate-300 mb-6 text-sm">Deploy the Simpul agent to your target server by running the following command in its terminal as <strong>root</strong> or with <strong>sudo</strong> privileges.</p>
+                        <p class="text-slate-300 mb-4 text-sm">Enter the IP address of the target server to generate a secure, one-touch deployment command bound to that machine.</p>
                         
+                        <div class="mb-5 flex space-x-3">
+                            <input type="text" x-model="deployTargetIp" placeholder="e.g. 192.168.128.112" class="flex-1 bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-lg px-4 py-2.5 text-sm text-white outline-none font-mono">
+                            <button @click="generateDeployToken()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-semibold px-4 py-2.5 rounded-lg text-sm transition-colors flex items-center shrink-0">
+                                <i class="fa-solid fa-key mr-2"></i> Generate Key
+                            </button>
+                        </div>
+
                         <div class="bg-slate-950 border border-slate-800 rounded-lg p-4 relative group">
-                            <code class="text-cyan-400 font-mono text-sm break-all" x-text="installCommand"></code>
+                            <code class="text-cyan-400 font-mono text-xs sm:text-sm break-all" x-text="installCommand"></code>
                             <button @click="copyInstallCommand()" class="absolute top-1/2 -translate-y-1/2 right-4 bg-slate-800 hover:bg-slate-700 text-slate-300 p-2 rounded transition-colors opacity-0 group-hover:opacity-100" title="Copy Command">
                                 <i class="fa-regular fa-copy"></i>
                             </button>
                         </div>
                         
                         <div class="mt-6 flex bg-blue-900/20 border border-blue-500/20 p-4 rounded-lg">
-                            <i class="fa-solid fa-circle-info text-blue-400 mt-0.5 mr-3"></i>
-                            <div class="text-sm text-slate-300">
-                                <p><strong>Zero-Touch Provisioning</strong></p>
-                                <p class="mt-1 text-slate-400">This script will automatically download the correct agent binary, register it with this Master Node, and set it up as a persistent systemd service.</p>
+                            <i class="fa-solid fa-shield-check text-blue-400 mt-0.5 mr-3 text-lg"></i>
+                            <div class="text-xs text-slate-300">
+                                <p><strong>IP-Bound One-Touch Provisioning</strong></p>
+                                <p class="mt-1 text-slate-400">This script includes an encrypted secret token. Running this 1-liner on the target machine automatically downloads the agent, binds it to the specified IP, and starts the systemd service.</p>
                             </div>
                         </div>
                     </div>
