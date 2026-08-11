@@ -274,11 +274,11 @@
                             if (res.ok) {
                                 const data = await res.json();
                                 this.metrics = {
-                                    cpu: data.cpu,
-                                    ram: data.ram,
-                                    disk: data.disk,
-                                    netIn: data.net_in,
-                                    netOut: data.net_out
+                                    cpu: Number(data.cpu).toFixed(1),
+                                    ram: Number(data.ram).toFixed(1),
+                                    disk: Number(data.disk).toFixed(1),
+                                    netIn: Number(data.net_in).toFixed(2),
+                                    netOut: Number(data.net_out).toFixed(2)
                                 };
                             }
                         } catch (err) {

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from app.core.database import get_db
@@ -12,13 +12,19 @@ router = APIRouter()
 
 @router.post("/push", status_code=status.HTTP_201_CREATED)
 async def push_logs(
+    request: Request,
     logs_in: List[LiveLogCreate],
     db: AsyncSession = Depends(get_db)
 ):
     """
     Receives JSON logs from agents. Auto-registers agent if hostname is new.
     """
+    client_ip = request.client.host if request.client else "unknown"
+    
     for log_data in logs_in:
+        # Override source IP if it's the default or unknown
+        actual_ip = client_ip if (not log_data.source_ip or log_data.source_ip == "0.0.0.0") else log_data.source_ip
+        
         # Find or create agent by hostname
         result = await db.execute(select(Agent).where(Agent.hostname == log_data.hostname))
         agent = result.scalars().first()
@@ -26,17 +32,21 @@ async def push_logs(
         if not agent:
             agent = Agent(
                 hostname=log_data.hostname,
-                ip_address=log_data.source_ip or "0.0.0.0",
+                ip_address=actual_ip,
                 auth_token=str(uuid.uuid4()), # Generate dummy token for now
                 is_online=True
             )
             db.add(agent)
             await db.flush() # flush to get agent.id
+        else:
+            # Update IP if it changed
+            if agent.ip_address == "0.0.0.0" or agent.ip_address != actual_ip:
+                agent.ip_address = actual_ip
 
         new_log = LiveLog(
             agent_id=agent.id,
             timestamp=log_data.timestamp,
-            source_ip=log_data.source_ip,
+            source_ip=actual_ip,
             log_message=log_data.log_message,
             threat_level=log_data.threat_level
         )
