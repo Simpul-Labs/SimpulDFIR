@@ -8,6 +8,7 @@ import (
 	"time"
 	
 	"github.com/simpul-labs/simpul-dfir-agent/internal/api"
+	"github.com/simpul-labs/simpul-dfir-agent/internal/metrics"
 	"github.com/simpul-labs/simpul-dfir-agent/internal/tailer"
 	// "github.com/simpul-labs/simpul-dfir-agent/internal/executor"
 	// "github.com/simpul-labs/simpul-dfir-agent/internal/forensic"
@@ -41,11 +42,42 @@ func main() {
 	apiClient := api.NewAPIClient(masterURL, authToken)
 	go apiClient.StartListening(logChan)
 
-	// Send an initial registration heartbeat so the backend knows the agent is online
+	// Start metrics collector goroutine
 	hostname, _ := os.Hostname()
 	if hostname == "" {
 		hostname = "unknown-server"
 	}
+	
+	go func() {
+		// Initialize CPU and Net counters
+		metrics.GetCPUUsage()
+		metrics.GetNetworkIO()
+		time.Sleep(1 * time.Second)
+		
+		for {
+			cpu := metrics.GetCPUUsage()
+			ram := metrics.GetRAMUsage()
+			disk := metrics.GetDiskUsage()
+			rx, tx := metrics.GetNetworkIO()
+			
+			payload := api.MetricsPayload{
+				CPU:    cpu,
+				RAM:    ram,
+				Disk:   disk,
+				NetIn:  rx,
+				NetOut: tx,
+			}
+			
+			err := apiClient.PushMetrics(hostname, payload)
+			if err != nil {
+				log.Printf("Failed to push metrics: %v", err)
+			}
+			
+			time.Sleep(3 * time.Second)
+		}
+	}()
+
+	// Send an initial registration heartbeat so the backend knows the agent is online
 	logChan <- tailer.LogEvent{
 		Timestamp:   time.Now().UTC().Format(time.RFC3339),
 		Hostname:    hostname,

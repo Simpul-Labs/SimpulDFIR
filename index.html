@@ -261,14 +261,25 @@
                     });
                 },
                 startMetricsSimulation() {
-                    // Start simulated metrics for dashboard
-                    setInterval(() => {
+                    // Start real-time metrics for dashboard
+                    setInterval(async () => {
                         if (!this.activeServer) return;
-                        this.metrics.cpu = Math.floor(Math.random() * 20) + 5; // 5-25%
-                        this.metrics.ram = Math.floor(Math.random() * 10) + 40; // 40-50%
-                        this.metrics.disk = 62; // static for demo
-                        this.metrics.netIn = (Math.random() * 5 + 1).toFixed(1);
-                        this.metrics.netOut = (Math.random() * 2 + 0.1).toFixed(1);
+                        
+                        try {
+                            const res = await fetch(`http://${window.location.hostname}:8000/api/v1/agents/${this.activeServer.hostname}/metrics`);
+                            if (res.ok) {
+                                const data = await res.json();
+                                this.metrics = {
+                                    cpu: data.cpu,
+                                    ram: data.ram,
+                                    disk: data.disk,
+                                    netIn: data.net_in,
+                                    netOut: data.net_out
+                                };
+                            }
+                        } catch (err) {
+                            console.error('Failed to fetch metrics', err);
+                        }
                     }, 2000);
                     
                     // Initial mock data
@@ -877,7 +888,7 @@
                                                     </div>
                                                 </td>
                                                 <td class="px-6 py-4 text-slate-400 text-sm" x-text="new Date(report.date).toLocaleString()"></td>
-                                                <td class="px-6 py-4 text-slate-400 font-mono text-[11px]" x-text="report.hash"></td>
+                                                <td class="px-6 py-4 text-slate-400 font-mono text-[11px] max-w-[200px] truncate" :title="report.hash" x-text="report.hash"></td>
                                                 <td class="px-6 py-4 text-right">
                                                     <button @click="downloadReportAsPDF(report)" class="bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 px-3 py-1.5 rounded text-xs font-semibold transition-colors inline-flex items-center">
                                                         <i class="fa-solid fa-download mr-1.5"></i> PDF

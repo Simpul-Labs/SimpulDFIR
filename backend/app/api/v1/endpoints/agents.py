@@ -5,10 +5,15 @@ from sqlalchemy import select, desc
 from app.core.database import get_db
 from app.models.agent import Agent
 from app.schemas.agent import AgentResponse
-from typing import List
+from app.schemas.metrics import AgentMetrics
+from typing import List, Dict
 import os
 
 router = APIRouter()
+
+# In-memory store for real-time metrics
+ACTIVE_METRICS: Dict[str, AgentMetrics] = {}
+
 
 @router.get("/", response_model=List[AgentResponse])
 async def get_all_agents(db: AsyncSession = Depends(get_db)):
@@ -108,3 +113,23 @@ async def delete_agent(agent_id: str, db: AsyncSession = Depends(get_db)):
     await db.delete(agent)
     await db.commit()
     return None
+
+@router.post("/{agent_id}/metrics")
+async def post_metrics(agent_id: str, metrics: AgentMetrics):
+    """
+    Receive real-time system metrics from an agent.
+    """
+    ACTIVE_METRICS[agent_id] = metrics
+    return {"status": "ok"}
+
+@router.get("/{agent_id}/metrics", response_model=AgentMetrics)
+async def get_metrics(agent_id: str):
+    """
+    Get the latest real-time system metrics for a specific agent.
+    """
+    metrics = ACTIVE_METRICS.get(agent_id)
+    if not metrics:
+        # Return fallback zeros if no data received yet
+        return AgentMetrics(cpu=0, ram=0, disk=0, net_in=0, net_out=0)
+    return metrics
+
