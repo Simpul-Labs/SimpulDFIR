@@ -702,15 +702,33 @@
         </nav>
         
         <!-- System Status Mini-Widget -->
-        <div class="p-4 m-4 rounded-xl bg-slate-900 border border-slate-800" x-data="{ cpu: 0, init() { setInterval(async () => { try { const r = await fetch(`http://${window.location.hostname}:8000/api/v1/system/status`); const d = await r.json(); this.cpu = d.cpu; } catch(e){} }, 2000); } }">
-            <div class="flex items-center justify-between mb-2">
+        <div class="p-4 m-4 rounded-xl bg-slate-900 border border-slate-800" x-data="{ cpu: 0, ram: 0, init() { setInterval(async () => { try { const r = await fetch(`http://${window.location.hostname}:8000/api/v1/system/status`); const d = await r.json(); this.cpu = d.cpu; this.ram = d.ram; } catch(e){} }, 2000); } }">
+            <div class="flex items-center justify-between mb-3">
                 <span class="text-xs font-semibold text-slate-400">Master Node</span>
-                <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
+                <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse"></span>
             </div>
-            <div class="w-full bg-slate-800 rounded-full h-1.5 mb-1">
-                <div class="bg-cyan-400 h-1.5 rounded-full transition-all duration-500" :style="`width: ${cpu}%`"></div>
+            
+            <!-- CPU Indicator -->
+            <div class="mb-3">
+                <div class="flex justify-between text-[10px] text-slate-500 mb-1">
+                    <span>CPU</span>
+                    <span x-text="(cpu || 0).toFixed(1) + '%'"></span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-1.5">
+                    <div class="bg-cyan-400 h-1.5 rounded-full transition-all duration-500" :style="`width: ${cpu}%`"></div>
+                </div>
             </div>
-            <div class="text-[10px] text-slate-500 text-right" x-text="'CPU: ' + (cpu || 0) + '%'"></div>
+
+            <!-- RAM Indicator -->
+            <div>
+                <div class="flex justify-between text-[10px] text-slate-500 mb-1">
+                    <span>RAM</span>
+                    <span x-text="(ram || 0).toFixed(1) + '%'"></span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-1.5">
+                    <div class="bg-emerald-400 h-1.5 rounded-full transition-all duration-500" :style="`width: ${ram}%`"></div>
+                </div>
+            </div>
         </div>
     </aside>
 
