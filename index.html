@@ -330,46 +330,131 @@
                     }, 800);
                 },
                 downloadReportAsPDF(report) {
-                    const self = this;
+                    var self = this;
                     self.showToast('Generating PDF for ' + report.id + '...', 'info');
                     
                     try {
-                        const container = document.createElement('div');
+                        var reportDate = new Date(report.date);
+                        var dateStr = reportDate.toUTCString();
+                        var localDate = reportDate.toLocaleDateString('id-ID', {year:'numeric',month:'long',day:'numeric'});
+                        var localTime = reportDate.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+                        
+                        var logsHtml = '';
+                        for (var i = 0; i < report.logs.length; i++) {
+                            logsHtml += '<tr><td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12px;text-align:center;">' + (i+1) + '</td>'
+                                + '<td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:12px;">' + report.logs[i] + '</td>'
+                                + '<td style="padding:6px 10px;border:1px solid #e2e8f0;font-size:12px;text-align:center;">Collected</td></tr>';
+                        }
+                        
+                        var container = document.createElement('div');
                         container.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;background:white;z-index:-1;';
-                        container.innerHTML = '<div style="padding:40px;font-family:Helvetica,Arial,sans-serif;color:#1e293b;background:white;">'
-                            + '<div style="border-bottom:3px solid #0891b2;padding-bottom:15px;margin-bottom:25px;">'
-                            + '<h1 style="color:#0f172a;margin:0;font-size:26px;font-weight:bold;">Simpul DFIR</h1>'
-                            + '<p style="color:#64748b;margin:4px 0 0 0;font-size:12px;text-transform:uppercase;letter-spacing:1.5px;">Digital Forensics &amp; Incident Response</p>'
-                            + '<div style="text-align:right;margin-top:-40px;"><span style="color:#0f172a;font-size:18px;font-weight:bold;">OFFICIAL REPORT</span><br>'
-                            + '<span style="color:#ef4444;font-size:11px;font-weight:bold;letter-spacing:1px;">TLP: AMBER // CONFIDENTIAL</span></div>'
-                            + '</div>'
-                            + '<h3 style="color:#0f172a;font-size:14px;text-transform:uppercase;border-bottom:1px solid #cbd5e1;padding-bottom:5px;margin-top:30px;">1. Chain of Custody &amp; Meta-Data</h3>'
-                            + '<table style="width:100%;margin-bottom:20px;border-collapse:collapse;font-size:13px;">'
-                            + '<tr><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;width:30%;font-weight:600;">Case Reference:</td><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;">' + report.id + '</td></tr>'
-                            + '<tr><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;font-weight:600;">Acquisition Target:</td><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;">' + report.agent + ' (IPv4: ' + report.agent_ip + ')</td></tr>'
-                            + '<tr><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;font-weight:600;">Timestamp (UTC):</td><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;">' + new Date(report.date).toUTCString() + '</td></tr>'
-                            + '<tr><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;font-weight:600;">SHA-256 Integrity Hash:</td><td style="padding:8px 0;border-bottom:1px solid #f1f5f9;font-family:monospace;font-size:11px;">' + report.hash + '</td></tr>'
+                        container.innerHTML = '<div style="padding:40px 50px;font-family:Helvetica,Arial,sans-serif;color:#1e293b;background:white;line-height:1.5;">'
+                            
+                            // === HEADER ===
+                            + '<div style="border-bottom:3px solid #0f172a;padding-bottom:15px;margin-bottom:30px;">'
+                            + '<table style="width:100%;border:none;"><tr>'
+                            + '<td style="border:none;vertical-align:top;"><h1 style="color:#0f172a;margin:0;font-size:22px;font-weight:bold;letter-spacing:0.5px;">SIMPUL DFIR</h1>'
+                            + '<p style="color:#64748b;margin:2px 0 0 0;font-size:10px;text-transform:uppercase;letter-spacing:2px;">Digital Forensics &amp; Incident Response Platform</p></td>'
+                            + '<td style="border:none;text-align:right;vertical-align:top;"><p style="color:#0f172a;margin:0;font-size:14px;font-weight:bold;">FORENSIC EXAMINATION REPORT</p>'
+                            + '<p style="color:#dc2626;margin:3px 0 0 0;font-size:9px;font-weight:bold;letter-spacing:1.5px;background:#fef2f2;display:inline-block;padding:2px 8px;border:1px solid #fecaca;">TLP:AMBER &mdash; CONFIDENTIAL</p></td>'
+                            + '</tr></table></div>'
+                            
+                            // === 1. DOCUMENT INFORMATION ===
+                            + '<h3 style="color:#0f172a;font-size:13px;text-transform:uppercase;border-bottom:2px solid #0891b2;padding-bottom:4px;margin:25px 0 12px 0;letter-spacing:1px;">1. Document Information</h3>'
+                            + '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px;">'
+                            + '<tr><td style="padding:7px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;width:35%;">Case Reference Number</td><td style="padding:7px 10px;border:1px solid #e2e8f0;font-family:monospace;font-weight:bold;">' + report.id + '</td></tr>'
+                            + '<tr><td style="padding:7px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;">Report Classification</td><td style="padding:7px 10px;border:1px solid #e2e8f0;color:#dc2626;font-weight:bold;">CONFIDENTIAL</td></tr>'
+                            + '<tr><td style="padding:7px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;">Report Date</td><td style="padding:7px 10px;border:1px solid #e2e8f0;">' + localDate + ' &mdash; ' + localTime + ' WIB</td></tr>'
+                            + '<tr><td style="padding:7px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;">Report Generated (UTC)</td><td style="padding:7px 10px;border:1px solid #e2e8f0;">' + dateStr + '</td></tr>'
+                            + '<tr><td style="padding:7px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;">Examining Authority</td><td style="padding:7px 10px;border:1px solid #e2e8f0;">Simpul DFIR Automated Forensic Engine</td></tr>'
+                            + '<tr><td style="padding:7px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;">Examiner</td><td style="padding:7px 10px;border:1px solid #e2e8f0;">System Administrator (via Master Node)</td></tr>'
                             + '</table>'
-                            + '<h3 style="color:#0f172a;font-size:14px;text-transform:uppercase;border-bottom:1px solid #cbd5e1;padding-bottom:5px;margin-top:30px;">2. Scope of Acquisition</h3>'
-                            + '<p style="font-size:13px;line-height:1.6;color:#334155;">The following digital artifacts were securely extracted from the target system for forensic analysis.</p>'
-                            + '<ul style="list-style-type:none;padding:0;margin-bottom:30px;">'
-                            + report.logs.map(function(log){ return '<li style="padding:8px 12px;background:#f8fafc;margin-bottom:6px;border-left:3px solid #0891b2;font-family:monospace;font-size:12px;">' + log + '</li>'; }).join('')
-                            + '</ul>'
-                            + '<h3 style="color:#0f172a;font-size:14px;text-transform:uppercase;border-bottom:1px solid #cbd5e1;padding-bottom:5px;margin-top:30px;">3. Automated Triage Summary</h3>'
-                            + '<div style="background:#fff1f2;border:1px solid #fecaca;border-left:4px solid #ef4444;padding:15px;margin-top:15px;">'
-                            + '<p style="color:#991b1b;font-size:13px;line-height:1.6;margin:0;"><strong>NOTICE:</strong> Initial automated heuristic analysis flagged potential anomalies within the acquired artifacts (' + (report.logs[0] || 'logs') + '). It is strongly recommended that a Level 2 SOC Analyst conduct a manual deep-dive review.</p>'
+                            
+                            // === 2. TARGET SYSTEM INFORMATION ===
+                            + '<h3 style="color:#0f172a;font-size:13px;text-transform:uppercase;border-bottom:2px solid #0891b2;padding-bottom:4px;margin:25px 0 12px 0;letter-spacing:1px;">2. Target System Information</h3>'
+                            + '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px;">'
+                            + '<tr><td style="padding:7px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;width:35%;">Hostname</td><td style="padding:7px 10px;border:1px solid #e2e8f0;font-weight:bold;">' + report.agent + '</td></tr>'
+                            + '<tr><td style="padding:7px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;">IPv4 Address</td><td style="padding:7px 10px;border:1px solid #e2e8f0;font-family:monospace;">' + report.agent_ip + '</td></tr>'
+                            + '<tr><td style="padding:7px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;">Acquisition Method</td><td style="padding:7px 10px;border:1px solid #e2e8f0;">Remote Live Acquisition via Simpul Agent</td></tr>'
+                            + '<tr><td style="padding:7px 10px;border:1px solid #e2e8f0;background:#f8fafc;font-weight:600;">Acquisition Time</td><td style="padding:7px 10px;border:1px solid #e2e8f0;">' + dateStr + '</td></tr>'
+                            + '</table>'
+                            
+                            // === 3. EXECUTIVE SUMMARY ===
+                            + '<h3 style="color:#0f172a;font-size:13px;text-transform:uppercase;border-bottom:2px solid #0891b2;padding-bottom:4px;margin:25px 0 12px 0;letter-spacing:1px;">3. Executive Summary</h3>'
+                            + '<p style="font-size:12px;line-height:1.7;color:#334155;text-align:justify;margin-bottom:15px;">This forensic examination report documents the acquisition and initial triage analysis of digital artifacts collected from the target system <strong>' + report.agent + '</strong> (IP: <strong>' + report.agent_ip + '</strong>). '
+                            + 'The acquisition was performed remotely via the Simpul DFIR Agent deployed on the target host. All collected evidence has been preserved with cryptographic integrity verification using SHA-256 hashing to ensure admissibility and chain of custody compliance.</p>'
+                            
+                            // === 4. EVIDENCE COLLECTED ===
+                            + '<h3 style="color:#0f172a;font-size:13px;text-transform:uppercase;border-bottom:2px solid #0891b2;padding-bottom:4px;margin:25px 0 12px 0;letter-spacing:1px;">4. Evidence Collected</h3>'
+                            + '<p style="font-size:12px;line-height:1.7;color:#334155;margin-bottom:10px;">The following digital artifacts were identified and collected during this forensic examination:</p>'
+                            + '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px;">'
+                            + '<tr style="background:#0f172a;color:white;"><th style="padding:8px 10px;border:1px solid #334155;text-align:center;font-size:11px;">No.</th><th style="padding:8px 10px;border:1px solid #334155;font-size:11px;">Artifact / Path</th><th style="padding:8px 10px;border:1px solid #334155;text-align:center;font-size:11px;">Status</th></tr>'
+                            + logsHtml
+                            + '</table>'
+                            
+                            // === 5. CHAIN OF CUSTODY ===
+                            + '<h3 style="color:#0f172a;font-size:13px;text-transform:uppercase;border-bottom:2px solid #0891b2;padding-bottom:4px;margin:25px 0 12px 0;letter-spacing:1px;">5. Chain of Custody</h3>'
+                            + '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px;">'
+                            + '<tr style="background:#0f172a;color:white;"><th style="padding:8px 10px;border:1px solid #334155;font-size:11px;">Action</th><th style="padding:8px 10px;border:1px solid #334155;font-size:11px;">Performed By</th><th style="padding:8px 10px;border:1px solid #334155;font-size:11px;">Date/Time (UTC)</th><th style="padding:8px 10px;border:1px solid #334155;font-size:11px;">Notes</th></tr>'
+                            + '<tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">Evidence Acquisition</td><td style="padding:6px 10px;border:1px solid #e2e8f0;">Simpul Agent (Automated)</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">' + dateStr + '</td><td style="padding:6px 10px;border:1px solid #e2e8f0;">Remote live acquisition from ' + report.agent_ip + '</td></tr>'
+                            + '<tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">Integrity Hash Generated</td><td style="padding:6px 10px;border:1px solid #e2e8f0;">Simpul DFIR Engine</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">' + dateStr + '</td><td style="padding:6px 10px;border:1px solid #e2e8f0;">SHA-256 computed on collected package</td></tr>'
+                            + '<tr><td style="padding:6px 10px;border:1px solid #e2e8f0;">Report Generated</td><td style="padding:6px 10px;border:1px solid #e2e8f0;">System Administrator</td><td style="padding:6px 10px;border:1px solid #e2e8f0;font-family:monospace;font-size:11px;">' + dateStr + '</td><td style="padding:6px 10px;border:1px solid #e2e8f0;">PDF forensic report exported</td></tr>'
+                            + '</table>'
+                            
+                            // === 6. INTEGRITY VERIFICATION ===
+                            + '<h3 style="color:#0f172a;font-size:13px;text-transform:uppercase;border-bottom:2px solid #0891b2;padding-bottom:4px;margin:25px 0 12px 0;letter-spacing:1px;">6. Integrity Verification</h3>'
+                            + '<p style="font-size:12px;line-height:1.7;color:#334155;margin-bottom:8px;">The following cryptographic hash was computed at the time of acquisition to verify the integrity of collected evidence:</p>'
+                            + '<div style="background:#f1f5f9;border:1px solid #cbd5e1;border-left:4px solid #0891b2;padding:12px 15px;margin-bottom:20px;">'
+                            + '<p style="margin:0 0 4px 0;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:1px;">SHA-256 Hash</p>'
+                            + '<p style="margin:0;font-family:monospace;font-size:11px;color:#0f172a;word-break:break-all;letter-spacing:0.5px;">' + report.hash + '</p>'
                             + '</div>'
-                            + '<div style="margin-top:60px;padding-top:20px;border-top:1px solid #e2e8f0;text-align:center;color:#94a3b8;font-size:10px;">'
-                            + '<p style="margin:0;">Generated automatically by Simpul DFIR Master Node Engine</p>'
-                            + '<p style="margin:4px 0 0 0;">This document contains sensitive security information. Unauthorized disclosure is strictly prohibited.</p>'
+                            
+                            // === 7. FINDINGS & ANALYSIS ===
+                            + '<h3 style="color:#0f172a;font-size:13px;text-transform:uppercase;border-bottom:2px solid #0891b2;padding-bottom:4px;margin:25px 0 12px 0;letter-spacing:1px;">7. Initial Findings &amp; Triage Analysis</h3>'
+                            + '<div style="background:#fff7ed;border:1px solid #fed7aa;border-left:4px solid #f97316;padding:12px 15px;margin-bottom:15px;">'
+                            + '<p style="color:#9a3412;font-size:12px;line-height:1.7;margin:0;"><strong>AUTOMATED TRIAGE NOTICE:</strong> Initial automated heuristic analysis has been performed on the acquired artifacts. '
+                            + 'The following artifacts were flagged for further examination: <strong>' + (report.logs[0] || 'N/A') + '</strong>. '
+                            + 'It is strongly recommended that a qualified Digital Forensic Investigator or Level 2+ SOC Analyst conduct a comprehensive manual review of all collected evidence.</p>'
+                            + '</div>'
+                            
+                            // === 8. RECOMMENDATIONS ===
+                            + '<h3 style="color:#0f172a;font-size:13px;text-transform:uppercase;border-bottom:2px solid #0891b2;padding-bottom:4px;margin:25px 0 12px 0;letter-spacing:1px;">8. Recommendations</h3>'
+                            + '<ol style="font-size:12px;line-height:1.8;color:#334155;padding-left:20px;margin-bottom:20px;">'
+                            + '<li>Perform a detailed manual review of all collected log artifacts listed in Section 4.</li>'
+                            + '<li>Cross-reference source IPs found in authentication logs against known threat intelligence feeds.</li>'
+                            + '<li>Verify the integrity hash in Section 6 before using any evidence in further proceedings.</li>'
+                            + '<li>Preserve the original evidence package in a secure, access-controlled storage facility.</li>'
+                            + '<li>Document any additional findings discovered during manual analysis in a supplementary report.</li>'
+                            + '</ol>'
+                            
+                            // === SIGN-OFF ===
+                            + '<div style="margin-top:40px;padding-top:20px;border-top:2px solid #0f172a;">'
+                            + '<table style="width:100%;border:none;font-size:12px;"><tr>'
+                            + '<td style="border:none;width:50%;vertical-align:top;">'
+                            + '<p style="margin:0 0 25px 0;font-weight:600;">Prepared by:</p>'
+                            + '<div style="border-bottom:1px solid #94a3b8;width:200px;margin-bottom:5px;height:20px;"></div>'
+                            + '<p style="margin:0;font-size:11px;color:#64748b;">Examiner Signature</p>'
+                            + '</td>'
+                            + '<td style="border:none;width:50%;vertical-align:top;">'
+                            + '<p style="margin:0 0 25px 0;font-weight:600;">Approved by:</p>'
+                            + '<div style="border-bottom:1px solid #94a3b8;width:200px;margin-bottom:5px;height:20px;"></div>'
+                            + '<p style="margin:0;font-size:11px;color:#64748b;">Supervisor Signature</p>'
+                            + '</td>'
+                            + '</tr></table></div>'
+                            
+                            // === FOOTER ===
+                            + '<div style="margin-top:30px;padding-top:15px;border-top:1px solid #e2e8f0;text-align:center;">'
+                            + '<p style="margin:0;color:#94a3b8;font-size:9px;">CONFIDENTIAL &mdash; This report was generated by Simpul DFIR Master Node Forensic Engine v1.0</p>'
+                            + '<p style="margin:3px 0 0 0;color:#94a3b8;font-size:9px;">Unauthorized access, distribution, or modification of this document is strictly prohibited.</p>'
+                            + '<p style="margin:3px 0 0 0;color:#cbd5e1;font-size:8px;">Page 1 of 1 &mdash; Case ' + report.id + '</p>'
                             + '</div></div>';
                         
                         document.body.appendChild(container);
                         
                         setTimeout(function() {
                             html2pdf().set({
-                                margin: 10,
-                                filename: report.id + '_Report.pdf',
+                                margin: [8, 8, 8, 8],
+                                filename: report.id + '_Forensic_Report.pdf',
                                 image: { type: 'jpeg', quality: 0.98 },
                                 html2canvas: { scale: 2, useCORS: true, logging: false },
                                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
