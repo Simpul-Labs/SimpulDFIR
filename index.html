@@ -332,12 +332,7 @@
                 downloadReportAsPDF(report) {
                     this.showToast(`Generating PDF for ${report.id}...`, 'info');
                     
-                    // Create a temporary element for the PDF template and attach it to DOM for html2canvas to render
                     const template = document.createElement('div');
-                    template.style.position = 'absolute';
-                    template.style.left = '-9999px';
-                    template.style.top = '-9999px';
-                    template.style.width = '800px';
                     template.innerHTML = `
                         <div style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; background: white;">
                             <div style="border-bottom: 3px solid #0891b2; padding-bottom: 15px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-end;">
@@ -389,24 +384,31 @@
                         </div>
                     `;
                     
-                    const opt = {
-                      margin:       0,
-                      filename:     `${report.id}_Report.pdf`,
-                      image:        { type: 'jpeg', quality: 0.98 },
-                      html2canvas:  { scale: 2 },
-                      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-                    };
+                    const printWindow = window.open('', '_blank');
+                    if (!printWindow) {
+                        this.showToast('Please allow popups to download the PDF', 'error');
+                        return;
+                    }
                     
-                    document.body.appendChild(template);
-                    
-                    html2pdf().set(opt).from(template).save().then(() => {
-                        this.showToast('PDF downloaded successfully', 'success');
-                        document.body.removeChild(template);
-                    }).catch(err => {
-                        this.showToast('Failed to generate PDF', 'error');
-                        console.error(err);
-                        document.body.removeChild(template);
-                    });
+                    printWindow.document.write(`
+                        <!DOCTYPE html>
+                        <html>
+                            <head>
+                                <title>${report.id}_Report</title>
+                                <style>
+                                    @media print {
+                                        @page { margin: 1cm; }
+                                        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                                    }
+                                </style>
+                            </head>
+                            <body onload="setTimeout(() => { window.print(); window.close(); }, 500)">
+                                ${template.innerHTML}
+                            </body>
+                        </html>
+                    `);
+                    printWindow.document.close();
+                    this.showToast('PDF print dialog opened successfully', 'success');
                 },
                 deleteReport(reportId) {
                     if (confirm('Are you sure you want to delete this forensic report?')) {
