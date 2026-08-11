@@ -384,31 +384,33 @@
                         </div>
                     `;
                     
-                    const printWindow = window.open('', '_blank');
-                    if (!printWindow) {
-                        this.showToast('Please allow popups to download the PDF', 'error');
-                        return;
+                    const printSection = document.getElementById('print-section') || document.createElement('div');
+                    printSection.id = 'print-section';
+                    printSection.innerHTML = template.innerHTML;
+                    
+                    if (!document.getElementById('print-section')) {
+                        document.body.appendChild(printSection);
+                    }
+                    printSection.style.display = 'block';
+                    
+                    if (!document.getElementById('print-style')) {
+                        const style = document.createElement('style');
+                        style.id = 'print-style';
+                        style.innerHTML = `
+                            @media print { 
+                                body > *:not(#print-section) { display: none !important; } 
+                                #print-section { display: block !important; position: absolute; left: 0; top: 0; width: 100%; background: white; } 
+                                @page { margin: 1cm; } 
+                            }
+                        `;
+                        document.head.appendChild(style);
                     }
                     
-                    printWindow.document.write(`
-                        <!DOCTYPE html>
-                        <html>
-                            <head>
-                                <title>${report.id}_Report</title>
-                                <style>
-                                    @media print {
-                                        @page { margin: 1cm; }
-                                        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                                    }
-                                </style>
-                            </head>
-                            <body onload="setTimeout(() => { window.print(); window.close(); }, 500)">
-                                ${template.innerHTML}
-                            </body>
-                        </html>
-                    `);
-                    printWindow.document.close();
-                    this.showToast('PDF print dialog opened successfully', 'success');
+                    setTimeout(() => {
+                        window.print();
+                        printSection.style.display = 'none';
+                        this.showToast('PDF print dialog closed', 'success');
+                    }, 500);
                 },
                 deleteReport(reportId) {
                     if (confirm('Are you sure you want to delete this forensic report?')) {
