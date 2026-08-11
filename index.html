@@ -14,6 +14,9 @@
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- html2pdf for client-side PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     
@@ -74,17 +77,18 @@
         [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="text-slate-300 h-screen overflow-hidden flex selection:bg-cyan-900 selection:text-cyan-100" x-data="appData()">
+<body class="text-slate-300 min-h-screen flex selection:bg-cyan-900 selection:text-cyan-100" x-data="appData()">
     
     <script>
         function appData() {
             return {
-                currentTab: 'ops',
+                currentTab: 'forensics',
                 activeServer: null,
                 forensicTarget: '',
                 isGenerating: false,
                 generationProgress: 0,
                 reports: [],
+                selectedLogs: ['/var/log/auth.log*', '/var/log/syslog*'],
                 // Dashboard Metrics State
                 metrics: { cpu: 0, ram: 0, disk: 0, netIn: 0, netOut: 0 },
                 securityEvents: [],
@@ -147,37 +151,105 @@
                 },
                 generateForensicPackage() {
                     if (!this.forensicTarget) {
-                        this.showToast('Please select a target server first!', 'error');
+                        this.showToast('Please select a target server', 'error');
+                        return;
+                    }
+                    if (this.selectedLogs.length === 0) {
+                        this.showToast('Please select at least one artifact to collect', 'error');
                         return;
                     }
                     
                     this.isGenerating = true;
                     this.generationProgress = 0;
-                    this.showToast('Initiating zero-touch forensic extraction...', 'info');
                     
-                    const interval = setInterval(() => {
+                    const progressInterval = setInterval(() => {
                         this.generationProgress += Math.floor(Math.random() * 15) + 5;
                         if (this.generationProgress >= 100) {
                             this.generationProgress = 100;
-                            clearInterval(interval);
+                            clearInterval(progressInterval);
                             
                             setTimeout(() => {
                                 this.isGenerating = false;
-                                const targetAgent = this.agents.find(a => a.id === this.forensicTarget);
-                                const newId = 'FR-' + new Date().getFullYear() + '-' + Math.floor(Math.random() * 9000 + 1000);
                                 
-                                this.reports.unshift({
-                                    id: newId,
-                                    server: targetAgent ? targetAgent.hostname : 'Unknown',
-                                    date: new Date().toISOString().split('T')[0],
-                                    size: (Math.random() * 200 + 50).toFixed(1) + ' MB',
-                                    status: 'ready'
-                                });
-                                this.showToast('Forensic package generated successfully!', 'success');
+                                const targetAgent = this.agents.find(a => a.id === parseInt(this.forensicTarget));
+                                
+                                const report = {
+                                    id: 'FR-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000),
+                                    agent: targetAgent ? targetAgent.hostname : 'Unknown',
+                                    agent_ip: targetAgent ? targetAgent.ip_address : '0.0.0.0',
+                                    date: new Date().toISOString(),
+                                    hash: Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join(''),
+                                    logs: [...this.selectedLogs]
+                                };
+                                
+                                this.reports.unshift(report);
+                                this.showToast(`Forensic package ${report.id} generated successfully`, 'success');
                                 this.forensicTarget = '';
                             }, 500);
                         }
                     }, 800);
+                },
+                downloadReportAsPDF(report) {
+                    this.showToast(`Generating PDF for ${report.id}...`, 'info');
+                    
+                    // Create a temporary element for the PDF template
+                    const template = document.createElement('div');
+                    template.innerHTML = `
+                        <div style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b;">
+                            <div style="border-bottom: 2px solid #0891b2; padding-bottom: 20px; margin-bottom: 30px;">
+                                <h1 style="color: #0f172a; margin: 0; font-size: 28px;">Simpul DFIR</h1>
+                                <p style="color: #64748b; margin: 5px 0 0 0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Incident Response Report</p>
+                            </div>
+                            
+                            <table style="width: 100%; margin-bottom: 30px; border-collapse: collapse;">
+                                <tr>
+                                    <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0; width: 30%;"><strong>Case ID:</strong></td>
+                                    <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0; color: #0f172a;">${report.id}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;"><strong>Target Server:</strong></td>
+                                    <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0; color: #0f172a;">${report.agent} (${report.agent_ip})</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;"><strong>Date Generated:</strong></td>
+                                    <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0; color: #0f172a;">${new Date(report.date).toLocaleString()}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;"><strong>Integrity Hash:</strong></td>
+                                    <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0; font-family: monospace; font-size: 11px;">${report.hash}</td>
+                                </tr>
+                            </table>
+                            
+                            <h3 style="color: #0f172a; border-left: 4px solid #0891b2; padding-left: 10px; margin-top: 40px;">Extracted Artifacts</h3>
+                            <ul style="list-style-type: none; padding: 0;">
+                                ${report.logs.map(log => `<li style="padding: 10px; background: #f8fafc; margin-bottom: 5px; border-radius: 4px; border: 1px solid #e2e8f0; font-family: monospace;">${log}</li>`).join('')}
+                            </ul>
+                            
+                            <div style="margin-top: 50px; background: #fef2f2; border: 1px solid #fecaca; padding: 15px; border-radius: 6px;">
+                                <h4 style="color: #b91c1c; margin-top: 0; display: flex; align-items: center;">Analysis Summary</h4>
+                                <p style="color: #7f1d1d; font-size: 13px; line-height: 1.5; margin-bottom: 0;">Automated analysis detected potential anomalous patterns in ${report.logs[0] || 'the collected logs'}. Manual review of the extracted artifacts by a forensic investigator is highly recommended. The original log files are securely archived with the provided SHA-256 integrity hash.</p>
+                            </div>
+                            
+                            <div style="margin-top: 50px; text-align: center; color: #94a3b8; font-size: 10px;">
+                                Generated by Simpul DFIR Master Node • Confidential
+                            </div>
+                        </div>
+                    `;
+                    
+                    const opt = {
+                      margin:       0,
+                      filename:     `${report.id}_Report.pdf`,
+                      image:        { type: 'jpeg', quality: 0.98 },
+                      html2canvas:  { scale: 2 },
+                      jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+                    };
+                    
+                    html2pdf().set(opt).from(template).save().then(() => {
+                        this.showToast('PDF downloaded successfully', 'success');
+                    }).catch(err => {
+                        this.showToast('Failed to generate PDF', 'error');
+                        console.error(err);
+                    });
                 },
                 startMetricsSimulation() {
                     // Start simulated metrics for dashboard
@@ -712,28 +784,28 @@
                                 <label class="block text-xs font-medium text-slate-400 mb-4 uppercase tracking-wider">Artifacts to Collect</label>
                                 <div class="space-y-3">
                                     <label class="flex items-start space-x-3 cursor-pointer group">
-                                        <input type="checkbox" checked class="w-4 h-4 mt-0.5 bg-slate-950 border-slate-700 rounded text-cyan-500 focus:ring-cyan-500/50 focus:ring-offset-slate-900 form-checkbox transition-colors">
+                                        <input type="checkbox" value="/var/log/auth.log*" x-model="selectedLogs" class="w-4 h-4 mt-0.5 bg-slate-950 border-slate-700 rounded text-cyan-500 focus:ring-cyan-500/50 focus:ring-offset-slate-900 form-checkbox transition-colors">
                                         <div>
                                             <div class="text-sm text-slate-300 font-mono group-hover:text-white transition-colors">/var/log/auth.log*</div>
                                             <div class="text-[10px] text-slate-500">Authentication & SSH logs</div>
                                         </div>
                                     </label>
                                     <label class="flex items-start space-x-3 cursor-pointer group">
-                                        <input type="checkbox" checked class="w-4 h-4 mt-0.5 bg-slate-950 border-slate-700 rounded text-cyan-500 focus:ring-cyan-500/50 focus:ring-offset-slate-900 form-checkbox transition-colors">
+                                        <input type="checkbox" value="/var/log/syslog*" x-model="selectedLogs" class="w-4 h-4 mt-0.5 bg-slate-950 border-slate-700 rounded text-cyan-500 focus:ring-cyan-500/50 focus:ring-offset-slate-900 form-checkbox transition-colors">
                                         <div>
                                             <div class="text-sm text-slate-300 font-mono group-hover:text-white transition-colors">/var/log/syslog*</div>
                                             <div class="text-[10px] text-slate-500">System daemon logs</div>
                                         </div>
                                     </label>
                                     <label class="flex items-start space-x-3 cursor-pointer group">
-                                        <input type="checkbox" class="w-4 h-4 mt-0.5 bg-slate-950 border-slate-700 rounded text-cyan-500 focus:ring-cyan-500/50 focus:ring-offset-slate-900 form-checkbox transition-colors">
+                                        <input type="checkbox" value="/var/log/nginx/*" x-model="selectedLogs" class="w-4 h-4 mt-0.5 bg-slate-950 border-slate-700 rounded text-cyan-500 focus:ring-cyan-500/50 focus:ring-offset-slate-900 form-checkbox transition-colors">
                                         <div>
                                             <div class="text-sm text-slate-300 font-mono group-hover:text-white transition-colors">/var/log/nginx/*</div>
                                             <div class="text-[10px] text-slate-500">Web server access/error logs</div>
                                         </div>
                                     </label>
                                     <label class="flex items-start space-x-3 cursor-pointer group">
-                                        <input type="checkbox" checked class="w-4 h-4 mt-0.5 bg-slate-950 border-slate-700 rounded text-cyan-500 focus:ring-cyan-500/50 focus:ring-offset-slate-900 form-checkbox transition-colors">
+                                        <input type="checkbox" value="System State Snapshot" x-model="selectedLogs" class="w-4 h-4 mt-0.5 bg-slate-950 border-slate-700 rounded text-cyan-500 focus:ring-cyan-500/50 focus:ring-offset-slate-900 form-checkbox transition-colors">
                                         <div>
                                             <div class="text-sm text-slate-300 font-mono group-hover:text-white transition-colors">System State Snapshot</div>
                                             <div class="text-[10px] text-slate-500">netstat, ps aux, lsof, w</div>
@@ -780,12 +852,30 @@
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-800/50">
-                                        <tr>
+                                        <tr x-show="reports.length === 0">
                                             <td colspan="5" class="px-6 py-8 text-center text-slate-500">
                                                 <i class="fa-solid fa-file-shield text-4xl mb-3 text-slate-700"></i>
                                                 <p class="text-sm">Belum ada laporan forensik yang dibuat.</p>
                                             </td>
                                         </tr>
+                                        <template x-for="report in reports" :key="report.id">
+                                            <tr class="hover:bg-slate-900/50 transition-colors group">
+                                                <td class="px-6 py-4 font-mono font-medium text-white" x-text="report.id"></td>
+                                                <td class="px-6 py-4">
+                                                    <div class="flex flex-col">
+                                                        <span class="text-slate-300 font-medium text-sm" x-text="report.agent"></span>
+                                                        <span class="text-xs text-slate-500 font-mono" x-text="report.agent_ip"></span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-4 text-slate-400 text-sm" x-text="new Date(report.date).toLocaleString()"></td>
+                                                <td class="px-6 py-4 text-slate-400 font-mono text-[11px]" x-text="report.hash"></td>
+                                                <td class="px-6 py-4 text-right">
+                                                    <button @click="downloadReportAsPDF(report)" class="bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 px-3 py-1.5 rounded text-xs font-semibold transition-colors inline-flex items-center">
+                                                        <i class="fa-solid fa-download mr-1.5"></i> PDF
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </template>
                                     </tbody>
                                 </table>
                             </div>
