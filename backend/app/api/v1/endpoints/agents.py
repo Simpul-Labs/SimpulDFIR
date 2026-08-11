@@ -8,6 +8,7 @@ from app.schemas.agent import AgentResponse
 from app.schemas.metrics import AgentMetrics
 from typing import List, Dict
 import os
+from datetime import datetime, timezone
 
 router = APIRouter()
 
@@ -115,11 +116,29 @@ async def delete_agent(agent_id: str, db: AsyncSession = Depends(get_db)):
     return None
 
 @router.post("/{agent_id}/metrics")
-async def post_metrics(agent_id: str, metrics: AgentMetrics):
+async def post_metrics(
+    request: Request,
+    agent_id: str,
+    metrics: AgentMetrics,
+    db: AsyncSession = Depends(get_db)
+):
     """
-    Receive real-time system metrics from an agent.
+    Receive real-time system metrics from an agent and update its last_seen and IP address.
     """
     ACTIVE_METRICS[agent_id] = metrics
+    
+    # Update agent status in DB
+    client_ip = request.client.host if request.client else None
+    result = await db.execute(select(Agent).where((Agent.hostname == agent_id) | (Agent.id == agent_id)))
+    agent = result.scalars().first()
+    
+    if agent:
+        agent.last_seen = datetime.now(timezone.utc)
+        agent.is_online = True
+        if client_ip and (agent.ip_address == "0.0.0.0" or not agent.ip_address):
+            agent.ip_address = client_ip
+        await db.commit()
+        
     return {"status": "ok"}
 
 @router.get("/{agent_id}/metrics", response_model=AgentMetrics)
