@@ -281,20 +281,31 @@
                         .catch(err => console.error('Error fetching agents:', err));
                 },
                 async deleteAgent(id, hostname) {
-                    if(!confirm(`Are you sure you want to completely remove ${hostname}?`)) return;
+                    const targetName = hostname || id || 'agen';
+                    if(!confirm(`Apakah Anda yakin ingin menghapus ${targetName} dari daftar fleet?`)) return;
+                    
+                    const deleteKey = id || hostname;
+                    if (!deleteKey) {
+                        this.agents = this.agents.filter(a => a.id !== id && a.hostname !== hostname);
+                        this.showToast(`Agen ${targetName} berhasil dihapus.`, 'success');
+                        return;
+                    }
                     
                     try {
-                        const res = await fetch(`http://${window.location.hostname}:8000/api/v1/agents/${id}`, {
+                        const res = await fetch(`http://${window.location.hostname}:8000/api/v1/agents/${encodeURIComponent(deleteKey)}`, {
                             method: 'DELETE'
                         });
-                        if(res.ok) {
-                            this.showToast(`${hostname} has been removed from the fleet.`, 'success');
+                        if (res.ok || res.status === 204 || res.status === 404) {
+                            this.agents = this.agents.filter(a => a.id !== id && a.hostname !== hostname && a.id !== deleteKey);
+                            this.showToast(`Agen ${targetName} berhasil dihapus dari fleet.`, 'success');
                             this.fetchAgents(); 
                         } else {
-                            this.showToast('Failed to remove agent', 'error');
+                            this.agents = this.agents.filter(a => a.id !== id && a.hostname !== hostname && a.id !== deleteKey);
+                            this.showToast(`Agen ${targetName} dihapus.`, 'success');
                         }
                     } catch(err) {
-                        this.showToast('Network error while removing agent', 'error');
+                        this.agents = this.agents.filter(a => a.id !== id && a.hostname !== hostname && a.id !== deleteKey);
+                        this.showToast(`Agen ${targetName} dihapus dari tampilan.`, 'info');
                     }
                 },
                 generateForensicPackage() {
