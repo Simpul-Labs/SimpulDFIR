@@ -348,7 +348,7 @@
                         }
                         
                         var container = document.createElement('div');
-                        container.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;background:white;z-index:-1;';
+                        container.style.cssText = 'position:absolute;left:0;top:0;width:800px;background:white;z-index:-9999;opacity:0.01;pointer-events:none;';
                         container.innerHTML = '<div style="padding:40px 50px;font-family:Helvetica,Arial,sans-serif;color:#1e293b;background:white;line-height:1.5;">'
                             
                             // === HEADER ===
@@ -458,21 +458,21 @@
                                     margin: [8, 8, 8, 8],
                                     filename: report.id + '_Forensic_Report.pdf',
                                     image: { type: 'jpeg', quality: 0.98 },
-                                    html2canvas: { scale: 2, useCORS: true, logging: false },
+                                    html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
                                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                                }).from(container.firstChild).save().then(function() {
+                                }).from(container).save().then(function() {
                                     document.body.removeChild(container);
                                     self.showToast('PDF downloaded successfully!', 'success');
                                 }).catch(function(err) {
                                     console.error('PDF error, falling back to HTML download:', err);
-                                    document.body.removeChild(container);
+                                    if (container.parentNode) document.body.removeChild(container);
                                     self.fallbackDownload(report, container.innerHTML);
                                 });
                             }, 300);
                         } else {
                             // Fallback if CDN is unreachable / offline
                             console.warn('html2pdf library not loaded (offline?), using direct report download');
-                            document.body.removeChild(container);
+                            if (container.parentNode) document.body.removeChild(container);
                             self.fallbackDownload(report, container.innerHTML);
                         }
                     } catch(err) {
