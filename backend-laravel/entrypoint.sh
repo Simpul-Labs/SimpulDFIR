@@ -12,7 +12,8 @@ chmod -R 777 database
 
 # Install dependencies if vendor is empty (useful if mounted as volume)
 if [ ! -d vendor ]; then
-    composer install --no-interaction --optimize-autoloader --no-audit
+    # Install dependensi Laravel (bypass security advisory via config di composer.json)
+    composer install --no-interaction --optimize-autoloader --no-dev
 fi
 
 # Generate key if not set
