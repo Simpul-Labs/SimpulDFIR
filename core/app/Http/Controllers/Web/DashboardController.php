@@ -26,7 +26,13 @@ class DashboardController extends Controller
             'ram' => 45.1,
             'disk' => 30.5,
             'ram_used_gb' => 7.2,
-            'ram_total_gb' => 16.0
+            'ram_total_gb' => 16.0,
+            'disk_used_gb' => 150.5,
+            'disk_total_gb' => 500.0,
+            'cpu_count' => 8,
+            'cpu_count_phys' => 4,
+            'hostname' => gethostname(),
+            'os' => php_uname('s') . ' ' . php_uname('r')
         ]);
     }
 

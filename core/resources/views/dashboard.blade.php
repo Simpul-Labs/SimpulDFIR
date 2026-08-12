@@ -844,29 +844,48 @@
                             <p class="text-slate-200 font-semibold text-sm leading-none group-hover:text-white transition-colors">Admin Root</p>
                             <p class="text-cyan-500/70 text-[10px] mt-1 font-mono uppercase tracking-wider">Superuser</p>
                         </div>
-                        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-800 flex items-center justify-center text-white font-bold text-sm shadow-lg ring-2 ring-slate-800 group-hover:ring-cyan-500/50 transition-all">
-                            <i class="fa-solid fa-user-astronaut"></i>
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-600 to-blue-800 flex items-center justify-center text-white font-bold text-sm shadow-lg ring-2 ring-slate-800 group-hover:ring-cyan-500/50 transition-all">
+                            <i class="fa-solid fa-user-astronaut text-lg"></i>
                         </div>
                     </div>
                     <!-- Dropdown -->
                     <div x-show="open" x-cloak
                          x-transition:enter="transition ease-out duration-200"
-                         x-transition:enter-start="opacity-0 translate-y-1"
-                         x-transition:enter-end="opacity-100 translate-y-0"
+                         x-transition:enter-start="opacity-0 translate-y-2 scale-95"
+                         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
                          x-transition:leave="transition ease-in duration-150"
-                         x-transition:leave-start="opacity-100 translate-y-0"
-                         x-transition:leave-end="opacity-0 translate-y-1"
-                         class="absolute right-0 mt-3 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50 py-1">
-                        <a href="#" @click.prevent="open = false; showSettingsModal = true" class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
-                            <i class="fa-solid fa-user mr-2 text-slate-500"></i> My Profile
-                        </a>
-                        <a href="#" @click.prevent="open = false; showSettingsModal = true" class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
-                            <i class="fa-solid fa-gear mr-2 text-slate-500"></i> Settings
-                        </a>
-                        <div class="border-t border-slate-800 my-1"></div>
-                        <a href="#" @click.prevent="open = false; logout()" class="block px-4 py-2 text-sm text-rose-400 hover:bg-slate-800 hover:text-rose-300 transition-colors">
-                            <i class="fa-solid fa-sign-out-alt mr-2 text-rose-500/70"></i> Sign out
-                        </a>
+                         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                         x-transition:leave-end="opacity-0 translate-y-2 scale-95"
+                         class="absolute right-0 mt-4 w-64 bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.7)] z-50 overflow-hidden">
+                        
+                        <div class="px-5 py-4 bg-gradient-to-br from-slate-900 to-slate-950 border-b border-slate-800">
+                            <p class="text-white font-bold text-sm">Administrator</p>
+                            <p class="text-slate-400 text-xs mt-0.5">admin@simpul-dfir.local</p>
+                        </div>
+
+                        <div class="p-2 space-y-1">
+                            <a href="#" @click.prevent="open = false; showSettingsModal = true" class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all group">
+                                <div class="w-8 h-8 rounded-md bg-slate-800 flex items-center justify-center mr-3 group-hover:bg-cyan-500/20 group-hover:text-cyan-400 transition-colors">
+                                    <i class="fa-solid fa-user-shield"></i>
+                                </div>
+                                <span>My Profile</span>
+                            </a>
+                            <a href="#" @click.prevent="open = false; showSettingsModal = true" class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all group">
+                                <div class="w-8 h-8 rounded-md bg-slate-800 flex items-center justify-center mr-3 group-hover:bg-blue-500/20 group-hover:text-blue-400 transition-colors">
+                                    <i class="fa-solid fa-sliders"></i>
+                                </div>
+                                <span>Settings & Security</span>
+                            </a>
+                        </div>
+                        
+                        <div class="border-t border-slate-800/80 bg-slate-900/30 p-2">
+                            <a href="#" @click.prevent="open = false; logout()" class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-all group">
+                                <div class="w-8 h-8 rounded-md flex items-center justify-center mr-3 group-hover:bg-rose-500/20 transition-colors">
+                                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                                </div>
+                                <span>Sign out</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
