@@ -3,7 +3,7 @@ FROM golang:1.22 AS agent-builder
 WORKDIR /src
 COPY agent/ .
 RUN go mod tidy
-RUN CGO_ENABLED=0 GOOS=linux go build -o simpul-agent cmd/agent/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o simpul-agent cmd/agent/main.go
 
 # Stage 2: Build the Python backend
 FROM python:3.11-slim

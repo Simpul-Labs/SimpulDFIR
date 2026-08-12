@@ -9,7 +9,6 @@ services:
     volumes:
       - ./data:/app/data
       - ./backend/app:/app/app
-      - ./backend/app/static:/app/static
     environment:
       - DATABASE_URL=sqlite+aiosqlite:///./data/simpul_dfir.db
       - TZ=Asia/Jakarta

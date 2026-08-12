@@ -92,7 +92,11 @@ echo "========================================="
 
 echo "[1/4] Stopping existing service and downloading agent binary..."
 systemctl stop simpul-agent 2>/dev/null || true
-curl -sSL -o /tmp/simpul-agent $MASTER_URL/api/v1/agents/download
+if ! curl -fsSL -o /tmp/simpul-agent $MASTER_URL/api/v1/agents/download; then
+    echo "ERROR: Failed to download agent binary from $MASTER_URL"
+    echo "       Make sure the Master Node is running and the binary is built."
+    exit 1
+fi
 mv /tmp/simpul-agent $BIN_PATH
 chmod +x $BIN_PATH
 
