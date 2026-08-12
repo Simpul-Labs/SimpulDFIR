@@ -128,3 +128,37 @@ func (c *APIClient) PushMetrics(hostname string, metrics MetricsPayload) error {
 
 	return nil
 }
+
+// PushConnections pushes active network connections
+func (c *APIClient) PushConnections(hostname string, connections interface{}) error {
+	jsonData, err := json.Marshal(connections)
+	if err != nil {
+		return err
+	}
+
+	parsedURL, err := url.Parse(c.MasterURL)
+	if err != nil {
+		return err
+	}
+	
+	connectionsURL := fmt.Sprintf("%s://%s/api/v1/agents/%s/connections", parsedURL.Scheme, parsedURL.Host, hostname)
+	req, err := http.NewRequest("POST", connectionsURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.AuthToken))
+
+	resp, err := c.HttpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	return nil
+}

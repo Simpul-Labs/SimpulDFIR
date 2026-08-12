@@ -44,20 +44,18 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy existing application directory
-COPY backend-laravel/ /var/www/html/
+# Copy application files
+COPY core/ /var/www/html/
 
-# Copy the compiled agent binary from Stage 1 into the public folder
-RUN mkdir -p /var/www/html/public
+# Copy agent to public directory
 COPY --from=agent-builder /src/simpul-agent /var/www/html/public/simpul-agent
 
-# Install dependencies
+# Install composer dependencies
 RUN composer install --no-interaction --optimize-autoloader --no-dev || true
 
-# Set permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache || true
 
-COPY backend-laravel/entrypoint.sh /usr/local/bin/
+COPY core/entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["entrypoint.sh"]

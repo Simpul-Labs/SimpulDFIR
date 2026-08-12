@@ -96,6 +96,19 @@ func main() {
 				log.Printf("Failed to push metrics: %v", err)
 			}
 			
+			// Push connections roughly every 10 seconds
+			if time.Now().Unix()%10 == 0 {
+				connections := metrics.GetActiveConnections()
+				if len(connections) > 0 {
+					go func() {
+						err := apiClient.PushConnections(hostname, connections)
+						if err != nil && err != api.ErrAgentDeleted {
+							log.Printf("Failed to push connections: %v", err)
+						}
+					}()
+				}
+			}
+			
 			time.Sleep(3 * time.Second)
 		}
 	}()
