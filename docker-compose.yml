@@ -2,27 +2,18 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: backend-laravel/Dockerfile
     container_name: simpul_backend
     ports:
+      - "80:8000"
       - "8000:8000"
     volumes:
-      - ./data:/app/data
-      - ./backend/app:/app/app
+      - ./backend-laravel:/var/www/html
+      - ./backend-laravel/database:/var/www/html/database
     environment:
-      - DATABASE_URL=sqlite+aiosqlite:///./data/simpul_dfir.db
+      - DB_CONNECTION=sqlite
+      - DB_DATABASE=/var/www/html/database/database.sqlite
+      - APP_ENV=production
+      - APP_DEBUG=true
       - TZ=Asia/Jakarta
     restart: unless-stopped
-
-  frontend:
-    image: nginx:alpine
-    container_name: simpul_frontend
-    ports:
-      - "80:80"
-    volumes:
-      - ./index.html:/usr/share/nginx/html/index.html:ro
-    restart: unless-stopped
-    depends_on:
-      - backend
-
-

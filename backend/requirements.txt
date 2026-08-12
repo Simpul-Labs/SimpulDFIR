@@ -1,9 +1,0 @@
-fastapi
-uvicorn[standard]
-sqlalchemy[asyncio]
-aiosqlite
-pydantic
-pydantic-settings
-python-multipart
-alembic
-psutil
