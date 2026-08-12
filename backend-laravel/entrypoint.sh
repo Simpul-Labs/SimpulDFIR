@@ -12,7 +12,7 @@ chmod -R 777 database
 
 # Install dependencies if vendor is empty (useful if mounted as volume)
 if [ ! -d vendor ]; then
-    composer install --no-interaction --optimize-autoloader
+    composer install --no-interaction --optimize-autoloader --no-audit
 fi
 
 # Generate key if not set

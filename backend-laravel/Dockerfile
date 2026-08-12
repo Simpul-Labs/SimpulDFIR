@@ -52,7 +52,7 @@ RUN mkdir -p /var/www/html/public
 COPY --from=agent-builder /src/simpul-agent /var/www/html/public/simpul-agent
 
 # Install dependencies
-RUN composer install --no-interaction --optimize-autoloader --no-dev || true
+RUN composer install --no-interaction --optimize-autoloader --no-dev --no-audit || true
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache || true
