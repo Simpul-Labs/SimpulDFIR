@@ -10,6 +10,11 @@ mkdir -p database
 touch database/database.sqlite
 chmod -R 777 database
 
+# Fix storage permissions for volume mounts
+mkdir -p storage/framework/{sessions,views,cache} bootstrap/cache
+chown -R www-data:www-data storage bootstrap/cache
+chmod -R 775 storage bootstrap/cache
+
 # Install dependencies if vendor is empty (useful if mounted as volume)
 if [ ! -d vendor ]; then
     # Install dependensi Laravel (bypass security advisory via config di composer.json)
