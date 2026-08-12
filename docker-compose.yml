@@ -2,14 +2,14 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend-laravel/Dockerfile
+      dockerfile: core/Dockerfile
     container_name: simpul_backend
     ports:
       - "80:8000"
       - "8000:8000"
     volumes:
-      - ./backend-laravel:/var/www/html
-      - ./backend-laravel/database:/var/www/html/database
+      - ./core:/var/www/html
+      - ./core/database:/var/www/html/database
     environment:
       - DB_CONNECTION=sqlite
       - DB_DATABASE=/var/www/html/database/database.sqlite

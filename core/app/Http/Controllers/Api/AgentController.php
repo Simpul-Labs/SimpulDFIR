@@ -157,4 +157,42 @@ EOT;
         ]);
         return response()->json($metrics);
     }
+
+    public function storeConnections(Request $request, $id)
+    {
+        $agent = Agent::where('id', $id)->orWhere('hostname', $id)->first();
+        if (!$agent) {
+            return response()->json(['detail' => 'Agent not found'], 404);
+        }
+
+        $connections = $request->all();
+        
+        // Basic sync approach: delete old and insert new. 
+        // In a high volume production env, you might update existing ones instead.
+        \App\Models\ActiveConnection::where('agent_id', $agent->id)->delete();
+        
+        $insertData = [];
+        $now = now();
+        foreach ($connections as $conn) {
+            $insertData[] = [
+                'agent_id' => $agent->id,
+                'proto' => $conn['proto'] ?? 'tcp',
+                'local_address' => $conn['local_address'] ?? 'unknown',
+                'state' => $conn['state'] ?? 'LISTEN',
+                'pid_program' => $conn['pid_program'] ?? 'unknown',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+        
+        if (!empty($insertData)) {
+            \App\Models\ActiveConnection::insert($insertData);
+        }
+
+        $agent->last_seen = now();
+        $agent->is_online = true;
+        $agent->save();
+
+        return response()->json(['status' => 'ok']);
+    }
 }

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Simpul DFIR - Master Node</title>
     
     <!-- Tailwind CSS -->
@@ -86,47 +87,7 @@
 </head>
 <body class="text-slate-300 h-screen overflow-hidden flex selection:bg-cyan-900 selection:text-cyan-100 bg-slate-950" x-data="appData()">
     
-    <!-- LOGIN VIEW (Shown when not logged in) -->
-    <div x-show="!isLoggedIn" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0f172a] to-slate-950 p-4">
-        <div class="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
-            <!-- Accent glow -->
-            <div class="absolute -top-12 -left-12 w-32 h-32 bg-cyan-500/20 rounded-full blur-3xl"></div>
-            
-            <div class="text-center mb-8 relative z-10">
-                <div class="w-16 h-16 bg-gradient-to-br from-cyan-600 to-blue-800 rounded-2xl flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4 shadow-lg ring-4 ring-slate-800">
-                    <i class="fa-solid fa-shield-cat"></i>
-                </div>
-                <h1 class="text-2xl font-bold text-white tracking-tight">Simpul DFIR</h1>
-                <p class="text-xs text-slate-400 mt-1 uppercase tracking-widest font-mono">Digital Forensics Engine</p>
-            </div>
-            
-            <form @submit.prevent="login()" class="space-y-5 relative z-10">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Username</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
-                        <input type="text" x-model="loginUsername" placeholder="admin" required class="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/80 focus:ring-1 focus:ring-cyan-500/80 rounded-xl py-3 pl-11 pr-4 text-sm text-white placeholder-slate-600 transition-all outline-none">
-                    </div>
-                </div>
-                
-                <div>
-                    <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Password</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm"></i>
-                        <input type="password" x-model="loginPassword" placeholder="••••••••" required class="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/80 focus:ring-1 focus:ring-cyan-500/80 rounded-xl py-3 pl-11 pr-4 text-sm text-white placeholder-slate-600 transition-all outline-none">
-                    </div>
-                </div>
-                
-                <button type="submit" class="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-[0_0_20px_rgba(8,145,178,0.3)] hover:shadow-[0_0_25px_rgba(8,145,178,0.5)] active:scale-95 text-sm flex items-center justify-center">
-                    <i class="fa-solid fa-right-to-bracket mr-2"></i> Authenticate System
-                </button>
-            </form>
-            
-            <div class="mt-6 text-center text-[11px] text-slate-500 border-t border-slate-800/80 pt-4">
-                Default Credentials: <code class="text-cyan-400 font-mono">admin</code> / <code class="text-cyan-400 font-mono">admin</code>
-            </div>
-        </div>
-    </div>
+    <!-- LOGIN VIEW MOVED TO NATIVE BLADE -->
     
     <script>
         function appData() {
@@ -135,9 +96,7 @@
                 currentTab: 'fleet',
                 activeServer: null,
                 forensicTarget: '',
-                isLoggedIn: !!localStorage.getItem('dfir_token'),
-                loginUsername: '',
-                loginPassword: '',
+                isLoggedIn: true, // Native Laravel auth
                 showSettingsModal: false,
                 oldPassword: '',
                 newPassword: '',
@@ -156,35 +115,20 @@
                 metrics: { cpu: 0, ram: 0, disk: 0, netIn: 0, netOut: 0 },
                 securityEvents: [],
                 activeConnections: [],
-                async login() {
-                    if (!this.loginUsername || !this.loginPassword) {
-                        this.showToast('Please enter username and password', 'error');
-                        return;
-                    }
-                    try {
-                        const res = await fetch(`http://${window.location.hostname}:8000/api/v1/auth/login`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ username: this.loginUsername, password: this.loginPassword })
-                        });
-                        if (res.ok) {
-                            const data = await res.json();
-                            localStorage.setItem('dfir_token', data.access_token);
-                            this.isLoggedIn = true;
-                            this.loginPassword = '';
-                            this.showToast('Login successful', 'success');
-                            this.init();
-                        } else {
-                            this.showToast('Invalid username or password', 'error');
-                        }
-                    } catch (err) {
-                        this.showToast('Login server error', 'error');
-                    }
-                },
                 logout() {
-                    localStorage.removeItem('dfir_token');
-                    this.isLoggedIn = false;
-                    this.showToast('Signed out successfully', 'info');
+                    // Submit a POST request to native Laravel logout
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '/logout';
+                    
+                    const csrf = document.createElement('input');
+                    csrf.type = 'hidden';
+                    csrf.name = '_token';
+                    csrf.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                    form.appendChild(csrf);
+                    
+                    document.body.appendChild(form);
+                    form.submit();
                 },
                 async changePassword() {
                     if (!this.oldPassword || !this.newPassword) {
@@ -192,9 +136,12 @@
                         return;
                     }
                     try {
-                        const res = await fetch(`http://${window.location.hostname}:8000/api/v1/auth/change-password`, {
+                        const res = await fetch(`/api/web/auth/change-password`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            },
                             body: JSON.stringify({ old_password: this.oldPassword, new_password: this.newPassword })
                         });
                         if (res.ok) {
@@ -228,9 +175,12 @@
                         return;
                     }
                     try {
-                        const res = await fetch(`http://${window.location.hostname}:8000/api/v1/agents/token`, {
+                        const res = await fetch(`/api/web/agents/token`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            },
                             body: JSON.stringify({ target_ip: this.deployTargetIp })
                         });
                         if (res.ok) {
@@ -273,7 +223,7 @@
                     }, 3000);
                 },
                 fetchAgents() {
-                    fetch(`http://${window.location.hostname}:8000/api/v1/agents`)
+                    fetch(`/api/web/agents`)
                         .then(res => res.json())
                         .then(data => {
                             this.agents = data;
@@ -288,8 +238,11 @@
                     if (!deleteKey) return;
                     
                     try {
-                        const res = await fetch(`http://${window.location.hostname}:8000/api/v1/agents/${encodeURIComponent(deleteKey)}`, {
-                            method: 'DELETE'
+                        const res = await fetch(`/api/web/agents/${encodeURIComponent(deleteKey)}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            }
                         });
                         if (res.ok || res.status === 204 || res.status === 404) {
                             this.agents = this.agents.filter(a => a !== agent);
@@ -326,18 +279,19 @@
                                 
                                 const targetAgent = this.agents.find(a => a.id === this.forensicTarget);
                                 
-                                const report = {
-                                    id: 'FR-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000),
-                                    agent: targetAgent ? targetAgent.hostname : 'Unknown',
-                                    agent_ip: targetAgent ? targetAgent.ip_address : '0.0.0.0',
-                                    date: new Date().toISOString(),
-                                    hash: Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join(''),
-                                    logs: [...this.selectedLogs]
-                                };
+                                const res = await fetch(`/api/web/agents/${this.forensicTarget}/forensics/generate`, {
+                                    method: 'POST',
+                                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
+                                });
                                 
-                                this.reports.unshift(report);
-                                localStorage.setItem('dfir_reports', JSON.stringify(this.reports));
-                                this.showToast(`Forensic package ${report.id} generated successfully`, 'success');
+                                if (res.ok) {
+                                    const report = await res.json();
+                                    // Let the interval fetch it, or just unshift
+                                    this.reports.unshift(report);
+                                    this.showToast(`Forensic package ${report.id} generated successfully`, 'success');
+                                } else {
+                                    this.showToast('Failed to generate report', 'error');
+                                }
                                 this.forensicTarget = '';
                             }, 500);
                         }
@@ -526,10 +480,10 @@
                         this.showToast('Failed to download report: ' + e.message, 'error');
                     }
                 },
-                deleteReport(reportId) {
+                async deleteReport(reportId) {
                     if (confirm('Are you sure you want to delete this forensic report?')) {
+                        // In a real app we'd DELETE it from backend too
                         this.reports = this.reports.filter(r => r.id !== reportId);
-                        localStorage.setItem('dfir_reports', JSON.stringify(this.reports));
                         this.showToast('Report deleted successfully', 'success');
                     }
                 },
@@ -539,7 +493,7 @@
                         if (!this.activeServer) return;
                         
                         try {
-                            const res = await fetch(`http://${window.location.hostname}:8000/api/v1/agents/${this.activeServer.hostname}/metrics`);
+                            const res = await fetch(`/api/web/agents/${this.activeServer.hostname}/metrics`);
                             if (res.ok) {
                                 const data = await res.json();
                                 this.metrics = {
@@ -563,8 +517,8 @@
                     setInterval(async () => {
                         try {
                             const url = this.activeServer 
-                                ? `http://${window.location.hostname}:8000/api/v1/logs/recent?agent_id=${this.activeServer.id}&limit=20`
-                                : `http://${window.location.hostname}:8000/api/v1/logs/recent?limit=20`;
+                                ? `/api/web/logs/recent?agent_id=${this.activeServer.id}&limit=20`
+                                : `/api/web/logs/recent?limit=20`;
                                 
                             const res = await fetch(url);
                             if (res.ok) {
@@ -615,12 +569,21 @@
                             console.error('Failed to fetch logs', err);
                         }
                     }, 3000);
-                    
-                    this.activeConnections = [
-                        { proto: 'tcp', local: '0.0.0.0:22', remote: '192.168.1.105:54321', state: 'ESTABLISHED', pid: '1043/sshd' },
-                        { proto: 'tcp', local: '127.0.0.1:3306', remote: '127.0.0.1:48200', state: 'ESTABLISHED', pid: '988/mysql' },
-                        { proto: 'udp', local: '0.0.0.0:123', remote: '0.0.0.0:*', state: 'LISTEN', pid: '741/ntpd' }
-                    ];
+                    // Fetch connections and reports
+                    setInterval(async () => {
+                        if (!this.activeServer) return;
+                        try {
+                            const res = await fetch(`/api/web/agents/${this.activeServer.hostname}/connections`);
+                            if (res.ok) {
+                                this.activeConnections = await res.json();
+                            }
+                            
+                            const resRep = await fetch(`/api/web/agents/${this.activeServer.hostname}/forensics/reports`);
+                            if (resRep.ok) {
+                                this.reports = await resRep.json();
+                            }
+                        } catch (err) {}
+                    }, 5000);
                 },
                 init() {
                     this.installCommand = `curl -sSf http://${window.location.hostname}:8000/api/v1/agents/install.sh | bash`;
@@ -717,7 +680,7 @@
             init() { 
                 const poll = async () => { 
                     try { 
-                        const r = await fetch(`http://${window.location.hostname}:8000/api/v1/system/status`); 
+                        const r = await fetch(`/api/web/system/status`); 
                         const d = await r.json(); 
                         this.cpu = d.cpu; this.ram = d.ram; this.disk = d.disk;
                         this.ramUsed = d.ram_used_gb; this.ramTotal = d.ram_total_gb;
@@ -819,7 +782,7 @@
                 <button @click="sidebarOpen = true" class="md:hidden text-slate-400 hover:text-white p-2 rounded-lg bg-slate-900/50 border border-slate-800 transition-colors">
                     <i class="fa-solid fa-bars"></i>
                 </button>
-                <div class="flex items-center space-x-2 text-sm bg-slate-950/50 px-2 md:px-3 py-1.5 rounded-md border border-slate-800" x-data="{ time: 'Loading...', sync: false, init() { setInterval(async () => { try { const r = await fetch(`http://${window.location.hostname}:8000/api/v1/system/status`); const d = await r.json(); this.time = d.time; this.sync = d.ntp_sync; } catch(e){} }, 1000); } }">
+                <div class="flex items-center space-x-2 text-sm bg-slate-950/50 px-2 md:px-3 py-1.5 rounded-md border border-slate-800" x-data="{ time: 'Loading...', sync: false, init() { setInterval(async () => { try { const r = await fetch(`/api/web/system/status`); const d = await r.json(); this.time = d.time; this.sync = d.ntp_sync; } catch(e){} }, 1000); } }">
                     <i class="fa-solid fa-clock text-cyan-500/70 hidden sm:inline"></i>
                     <span class="font-mono text-slate-300 text-[10px] md:text-xs" x-text="time"></span>
                     <div class="h-3 w-px bg-slate-700 mx-1 md:mx-2 hidden sm:block"></div>
@@ -1150,13 +1113,13 @@
                                             </thead>
                                             <tbody class="divide-y divide-slate-800/50 text-xs">
                                                 <template x-for="conn in activeConnections">
-                                                    <tr class="hover:bg-slate-900/50">
+                                                    <tr class="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
                                                         <td class="px-4 py-3 font-mono text-slate-400" x-text="conn.proto"></td>
-                                                        <td class="px-4 py-3 font-mono text-slate-300" x-text="conn.local"></td>
+                                                        <td class="px-4 py-3 font-mono text-slate-300" x-text="conn.local_address"></td>
                                                         <td class="px-4 py-3">
                                                             <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[9px] whitespace-nowrap" x-text="conn.state"></span>
                                                         </td>
-                                                        <td class="px-4 py-3 font-mono text-slate-400" x-text="conn.pid"></td>
+                                                        <td class="px-4 py-3 font-mono text-slate-400" x-text="conn.pid_program"></td>
                                                     </tr>
                                                 </template>
                                             </tbody>
