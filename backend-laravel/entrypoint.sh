@@ -23,6 +23,9 @@ fi
 # Run migrations
 php artisan migrate --force
 
+# Seed database with default admin
+php artisan db:seed --force
+
 # Link storage
 php artisan storage:link || true
 
