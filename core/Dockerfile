@@ -47,8 +47,8 @@ WORKDIR /var/www/html
 # Copy application files
 COPY core/ /var/www/html/
 
-# Copy agent to public directory
-COPY --from=agent-builder /src/simpul-agent /var/www/html/public/simpul-agent
+# Copy agent to a safe directory outside the volume mount
+COPY --from=agent-builder /src/simpul-agent /opt/simpul-agent
 
 # Install composer dependencies
 RUN composer install --no-interaction --optimize-autoloader --no-dev || true

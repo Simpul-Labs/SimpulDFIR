@@ -13,4 +13,8 @@ Route::prefix('v1')->group(function () {
     
     // Logs endpoints (For Go Agent)
     Route::post('/logs/push', [LogController::class, 'store']);
+    
+    // Utilities
+    Route::get('/utilities/pdf/{id}', [\App\Http\Controllers\Web\DashboardController::class, 'downloadPdf']);
+    Route::get('/utilities/html/{id}', [\App\Http\Controllers\Web\DashboardController::class, 'downloadHtml']);
 });

@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-var lastTotalUser, lastTotalUserLow, lastTotalSys, lastTotalIdle uint64
+var lastTotalCPU, lastIdleCPU uint64
 
 func GetCPUUsage() float64 {
 	file, err := os.Open("/proc/stat")
@@ -22,33 +22,37 @@ func GetCPUUsage() float64 {
 	scanner := bufio.NewScanner(file)
 	if scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
-		if len(fields) > 4 && fields[0] == "cpu" {
+		if len(fields) > 7 && fields[0] == "cpu" {
 			user, _ := strconv.ParseUint(fields[1], 10, 64)
 			nice, _ := strconv.ParseUint(fields[2], 10, 64)
 			sys, _ := strconv.ParseUint(fields[3], 10, 64)
 			idle, _ := strconv.ParseUint(fields[4], 10, 64)
+			iowait, _ := strconv.ParseUint(fields[5], 10, 64)
+			irq, _ := strconv.ParseUint(fields[6], 10, 64)
+			softirq, _ := strconv.ParseUint(fields[7], 10, 64)
 			
-			totalUser := user
-			totalUserLow := nice
-			totalSys := sys
-			totalIdle := idle
+			idleTime := idle + iowait
+			nonIdleTime := user + nice + sys + irq + softirq
+			totalTime := idleTime + nonIdleTime
 			
-			total := totalUser + totalUserLow + totalSys + totalIdle
-			lastTotal := lastTotalUser + lastTotalUserLow + lastTotalSys + lastTotalIdle
+			totalDiff := float64(totalTime - lastTotalCPU)
+			idleDiff := float64(idleTime - lastIdleCPU)
 			
-			totalDiff := float64(total - lastTotal)
-			idleDiff := float64(totalIdle - lastTotalIdle)
-			
-			lastTotalUser = totalUser
-			lastTotalUserLow = totalUserLow
-			lastTotalSys = totalSys
-			lastTotalIdle = totalIdle
+			lastTotalCPU = totalTime
+			lastIdleCPU = idleTime
 			
 			if totalDiff == 0 {
 				return 0.0
 			}
 			
-			return (totalDiff - idleDiff) / totalDiff * 100.0
+			cpuUsage := (totalDiff - idleDiff) / totalDiff * 100.0
+			if cpuUsage < 0 {
+				return 0.0
+			}
+			if cpuUsage > 100.0 {
+				return 100.0
+			}
+			return cpuUsage
 		}
 	}
 	return 0

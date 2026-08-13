@@ -14,25 +14,65 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        return view('dashboard');
+        return view('pages.dashboard');
+    }
+
+    public function cyberops()
+    {
+        return view('pages.dashboard');
+    }
+
+    public function forensics()
+    {
+        return view('pages.dashboard');
     }
 
     public function status()
     {
+        // Fetch real Linux system metrics
+        $cpu = function_exists('sys_getloadavg') ? sys_getloadavg()[0] : 0;
+        
+        $meminfo = @file_get_contents("/proc/meminfo");
+        $ramTotal = 16.0;
+        $ramUsed = 7.2;
+        $ramPercent = 45.1;
+        if ($meminfo) {
+            preg_match('/MemTotal:\s+(\d+)\s+kB/', $meminfo, $total);
+            preg_match('/MemAvailable:\s+(\d+)\s+kB/', $meminfo, $avail);
+            if (isset($total[1]) && isset($avail[1])) {
+                $ramTotal = $total[1] / 1024 / 1024;
+                $ramAvail = $avail[1] / 1024 / 1024;
+                $ramUsed = $ramTotal - $ramAvail;
+                $ramPercent = $ramTotal > 0 ? ($ramUsed / $ramTotal) * 100 : 0;
+            }
+        }
+
+        $diskTotal = @disk_total_space("/") ? disk_total_space("/") / 1024 / 1024 / 1024 : 500.0;
+        $diskFree = @disk_free_space("/") ? disk_free_space("/") / 1024 / 1024 / 1024 : 350.0;
+        $diskUsed = $diskTotal - $diskFree;
+        $diskPercent = $diskTotal > 0 ? ($diskUsed / $diskTotal) * 100 : 0;
+
+        $cpuCount = (int)@shell_exec("nproc");
+        if ($cpuCount <= 0) $cpuCount = 8;
+        
+        $cpuPhys = (int)@shell_exec("lscpu -p | egrep -v '^#' | sort -u -t, -k 2,2 | wc -l");
+        if ($cpuPhys <= 0) $cpuPhys = 4;
+
         return response()->json([
-            'ntp_sync' => true,
-            'system_time' => Carbon::now()->toIso8601String(),
-            'cpu' => 5.2,
-            'ram' => 45.1,
-            'disk' => 30.5,
-            'ram_used_gb' => 7.2,
-            'ram_total_gb' => 16.0,
-            'disk_used_gb' => 150.5,
-            'disk_total_gb' => 500.0,
-            'cpu_count' => 8,
-            'cpu_count_phys' => 4,
+            'cpu' => round($cpu, 1),
+            'ram' => round($ramPercent, 1),
+            'ram_used_gb' => round($ramUsed, 1),
+            'ram_total_gb' => round($ramTotal, 1),
+            'disk' => round($diskPercent, 1),
+            'disk_used_gb' => round($diskUsed, 1),
+            'disk_total_gb' => round($diskTotal, 1),
+            'cpu_count' => $cpuCount,
+            'cpu_count_phys' => $cpuPhys,
             'hostname' => gethostname(),
-            'os' => php_uname('s') . ' ' . php_uname('r')
+            'username' => get_current_user(),
+            'os' => php_uname('s') . ' ' . php_uname('r'),
+            'time' => Carbon::now()->format('H:i:s'),
+            'ntp_sync' => true,
         ]);
     }
 
@@ -125,18 +165,75 @@ class DashboardController extends Controller
         return response()->json($reports);
     }
 
-    public function generateForensicReport($id)
+    public function generateForensicReport(Request $request, $id)
     {
         $agent = Agent::where('id', $id)->orWhere('hostname', $id)->first();
         if (!$agent) return response()->json(['error' => 'Agent not found'], 404);
 
+        $logs = $request->input('logs', []);
+        
+        $hasSystemState = in_array('System State Snapshot', $logs);
+        $hasAuthLog = false;
+        $hasNginxLog = false;
+        
+        foreach($logs as $l) {
+            if (strpos($l, 'auth.log') !== false) $hasAuthLog = true;
+            if (strpos($l, 'nginx') !== false) $hasNginxLog = true;
+        }
+
+        // Create initial report row with a generated UUID
         $report = \App\Models\ForensicReport::create([
             'agent_id' => $agent->id,
-            'status' => 'COMPLETED', // Simulating instant generation for now
+            'status' => 'COMPLETED', 
             'hash' => hash('sha256', (string) Str::uuid()),
-            'pdf_data' => 'dummy_path.pdf'
+            'pdf_data' => 'generating...'
         ]);
 
+        // Render HTML using Blade
+        $html = view('reports.forensic_pdf', compact('agent', 'report', 'logs', 'hasSystemState', 'hasAuthLog', 'hasNginxLog'))->render();
+        
+        // Ensure storage directory exists
+        if (!\Illuminate\Support\Facades\Storage::exists('forensics')) {
+            \Illuminate\Support\Facades\Storage::makeDirectory('forensics');
+        }
+
+        // Save HTML
+        \Illuminate\Support\Facades\Storage::put("forensics/{$report->id}.html", $html);
+
+        $report->update(['pdf_data' => "forensics/{$report->id}.html"]);
+
         return response()->json($report);
+    }
+
+    public function downloadPdf($id)
+    {
+        $report = \App\Models\ForensicReport::find($id);
+        if (!$report) return response()->json(['error' => 'Report not found'], 404);
+
+        $path = "forensics/{$report->id}.pdf";
+        if (!\Illuminate\Support\Facades\Storage::exists($path)) {
+            return response()->json(['error' => 'PDF not found on server'], 404);
+        }
+
+        return \Illuminate\Support\Facades\Storage::download($path, "{$report->id}_NIST_Forensic_Report.pdf", [
+            'Content-Type' => 'application/pdf',
+        ]);
+    }
+
+    public function downloadHtml($id)
+    {
+        $report = \App\Models\ForensicReport::find($id);
+        if (!$report) return response()->json(['error' => 'Report not found'], 404);
+
+        $path = "forensics/{$report->id}.html";
+        if (!\Illuminate\Support\Facades\Storage::exists($path)) {
+            return response()->json(['error' => 'HTML not found on server'], 404);
+        }
+
+        $cleanFilename = "Laporan_Forensik_NIST_" . substr($report->id, 0, 8) . ".html";
+
+        return \Illuminate\Support\Facades\Storage::download($path, $cleanFilename, [
+            'Content-Type' => 'text/html',
+        ]);
     }
 }

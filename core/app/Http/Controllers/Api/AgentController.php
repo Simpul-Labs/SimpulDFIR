@@ -37,7 +37,7 @@ class AgentController extends Controller
 
     public function download()
     {
-        $path = public_path('simpul-agent');
+        $path = '/opt/simpul-agent';
         if (!file_exists($path)) {
             return response()->json(['detail' => 'Agent binary not found.'], 404);
         }
